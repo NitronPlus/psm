@@ -1,10 +1,10 @@
 ![License: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-orange.svg)
 
-# The SSH server Management
+# Personal SSH server Management Tool
 
 ## Introdution
 
-> A cli tool for ssh remote server management.
+> A cli tool for multi ssh remote server management.
 
 ## License
 
