@@ -3,16 +3,11 @@ use std::path::{PathBuf};
 use serde::{Serialize, Deserialize};
 use clap::{Parser, Subcommand};
 use std::fs;
-
-const CONFIG: &str = r#"{
-    "pub_key_path" : "{key}",
-    "server_path" : "{server}",
-    "ssh_client_path" : "ssh"
-}"#;
+use serde_json;
 
 const SERVER: &str = r#"{
     "server": []
-"#;
+}"#;
 
 const APP_NAME: &str = "psm";
 
@@ -91,12 +86,14 @@ fn main() {
         }
         None => {
             let servers = read_servers(config.server_path);
-            for server in servers.server {
-                let port = match server.port {
-                    Some(p) => p,
-                    _ => 22
-                };
-                println!("{}, {}, {}, {}", server.alias, server.username,server.address, port);
+            if  servers.server.is_empty() == false {
+                for server in servers.server {
+                    let port = match server.port {
+                        Some(p) => p,
+                        _ => 22
+                    };
+                    println!("{}, {}, {}, {}", server.alias, server.username,server.address, port);
+                }
             }
         }
     }
@@ -156,11 +153,12 @@ fn init() -> AppConfig {
     if !app_config_path.exists() {
         fs::create_dir(&app_config_path).unwrap();
         std::fs::write(server_path, self::SERVER).unwrap();
-        let config = &self::CONFIG.replace("{key}", key_path.to_str().unwrap())
-            .replace("{server}", server_path.to_str().unwrap());
-        // let config = str::replace(&self::CONFIG, "{key}", key_path.to_str().unwrap());
-        // let config = str::replace(&*config, "{server}", server_path.to_str().unwrap());
-        std::fs::write(config_path, config).unwrap();
+        let config = AppConfig {
+            pub_key_path: key_path.to_path_buf(),
+            server_path: server_path.to_path_buf(),
+            ssh_client_path: PathBuf::from("ssh")
+        };
+        std::fs::write(config_path, serde_json::to_string(&config).unwrap()).unwrap();
     }
     let v = std::fs::read_to_string(config_path).unwrap();
     let config: AppConfig = serde_json::from_str(&v).unwrap();
