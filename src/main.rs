@@ -38,6 +38,13 @@ trait PrettyJson {
     }
 }
 
+impl ServerCollection {
+    fn add(mut self, server: Server) -> Self {
+        self.hosts.push(server);
+        self
+    }
+}
+
 impl PrettyJson for ServerCollection {}
 
 impl PrettyJson for AppConfig {}
@@ -60,7 +67,9 @@ enum Commands {
         #[clap(default_value_t = 22)]
         port: u16,
     },
-    Remove {},
+    Remove {
+        alias: String,
+    },
     Modify {},
     Go {
         alias: String
@@ -73,8 +82,9 @@ fn main() {
     let cli = Cli::parse();
     match &cli.command {
         Some(Commands::Create { alias, username, address, port }) => {
-            if search_server(alias, config) == false {
-                let _server = {
+            let collection = read_servers(&config.server_path);
+            if search_server(alias, &collection) == false {
+                let server = {
                     Server {
                         alias: alias.to_string(),
                         username: username.to_string(),
@@ -82,25 +92,29 @@ fn main() {
                         port: Some(port.to_owned()),
                     }
                 };
-                println!("server alias {} created", alias);
+                let c = collection.add(server);
+                std::fs::write(&config.server_path, c.pretty_json()).unwrap();
+                println!("server alias {:?} created", c);
             } else {
                 println!("server alias {} is exists", alias);
             }
         }
-        Some(Commands::Remove {}) => {
+        Some(Commands::Remove {alias}) => {
+            let collection = read_servers(&config.server_path);
             println!("Not printing testing lists...");
         }
         Some(Commands::Modify {}) => {
             println!("Not printing testing lists...");
         }
         Some(Commands::Go { alias }) => {
-            search_server(alias, config);
+            let collection = read_servers(&config.server_path);
+            search_server(alias, &collection);
         }
         Some(Commands::Link {}) => {
             println!("Not printing testing lists...");
         }
         None => {
-            let hosts = read_servers(config.server_path);
+            let hosts = read_servers(&config.server_path);
             show_table(hosts);
         }
     }
@@ -136,10 +150,9 @@ fn get_home_dir() -> PathBuf {
 //         None => panic!("cannot find user home dir")
 //     }
 // }
-fn search_server(server_name: &String, config: AppConfig) -> bool {
-    let collection = read_servers(config.server_path);
+fn search_server(server_name: &String, collection: &ServerCollection) -> bool {
     let mut is_match: bool = false;
-    for server in collection.hosts {
+    for server in &collection.hosts {
         if server_name.eq(&server.alias) {
             is_match = true;
             break;
@@ -178,8 +191,8 @@ fn init() -> AppConfig {
     serde_json::from_str(&v).unwrap()
 }
 
-fn read_servers(path: PathBuf) -> ServerCollection {
-    let v = std::fs::read_to_string(path).unwrap();
+fn read_servers(path: &PathBuf) -> ServerCollection {
+    let v = std::fs::read_to_string(&path).unwrap();
     serde_json::from_str(&v).unwrap()
 }
 
