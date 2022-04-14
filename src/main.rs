@@ -4,14 +4,13 @@ use serde::{Serialize, Deserialize};
 use clap::{Parser, Subcommand};
 use std::fs;
 use serde_json;
+use cli_table::{Cell, CellStruct, format::Justify, print_stdout, Style, Table};
 
 const SERVER: &str = r#"{
-    "server": []
+    "hosts": []
 }"#;
 
 const APP_NAME: &str = "psm";
-
-static mut L: &str = "5";
 
 #[derive(Serialize, Deserialize, Debug)]
 struct AppConfig {
@@ -30,8 +29,19 @@ struct Server {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerCollection {
-    server: Vec<Server>,
+    hosts: Vec<Server>,
 }
+
+trait PrettyJson {
+    fn pretty_json(&self) -> String where Self: Serialize {
+        serde_json::to_string_pretty(&self).unwrap()
+    }
+}
+
+impl PrettyJson for ServerCollection {}
+
+impl PrettyJson for AppConfig {}
+
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -47,7 +57,8 @@ enum Commands {
         alias: String,
         username: String,
         address: String,
-        port: Option<u16>,
+        #[clap(default_value_t = 22)]
+        port: u16,
     },
     Remove {},
     Modify {},
@@ -62,39 +73,35 @@ fn main() {
     let cli = Cli::parse();
     match &cli.command {
         Some(Commands::Create { alias, username, address, port }) => {
-            let server = {
-                Server {
-                    alias: alias.to_string(),
-                    username: username.to_string(),
-                    address: address.to_string(),
-                    port: port.to_owned(),
-                }
-            };
-            println!("{:?}", server);
+            if search_server(alias, config) == false {
+                let _server = {
+                    Server {
+                        alias: alias.to_string(),
+                        username: username.to_string(),
+                        address: address.to_string(),
+                        port: Some(port.to_owned()),
+                    }
+                };
+                println!("server alias {} created", alias);
+            } else {
+                println!("server alias {} is exists", alias);
+            }
         }
         Some(Commands::Remove {}) => {
             println!("Not printing testing lists...");
         }
         Some(Commands::Modify {}) => {
             println!("Not printing testing lists...");
-        },
-        Some(Commands::Go {alias}) => {
+        }
+        Some(Commands::Go { alias }) => {
             search_server(alias, config);
-        },
+        }
         Some(Commands::Link {}) => {
             println!("Not printing testing lists...");
         }
         None => {
-            let servers = read_servers(config.server_path);
-            if  servers.server.is_empty() == false {
-                for server in servers.server {
-                    let port = match server.port {
-                        Some(p) => p,
-                        _ => 22
-                    };
-                    println!("{}, {}, {}, {}", server.alias, server.username,server.address, port);
-                }
-            }
+            let hosts = read_servers(config.server_path);
+            show_table(hosts);
         }
     }
     // let target = &cli.alias;
@@ -121,6 +128,7 @@ fn get_home_dir() -> PathBuf {
         None => panic!("cannot find user home dir")
     }
 }
+
 // fn get_config_dir() -> PathBuf {
 //     let dir = dirs::config_dir();
 //     match dir  {
@@ -128,20 +136,26 @@ fn get_home_dir() -> PathBuf {
 //         None => panic!("cannot find user home dir")
 //     }
 // }
-fn search_server(server_name:&String, config:AppConfig)  {
-    let servers = read_servers(config.server_path);
-    for server in servers.server {
+fn search_server(server_name: &String, config: AppConfig) -> bool {
+    let collection = read_servers(config.server_path);
+    let mut is_match: bool = false;
+    for server in collection.hosts {
         if server_name.eq(&server.alias) {
-            let port = match server.port {
-                Some(p) => p,
-                _ => 22
-            };
-            let cmd = format!("{}@{}",  server.username, server.address);
-            let p = format!("-p{}", port);
-            std::process::Command::new(config.ssh_client_path.to_str().unwrap())
-                .arg(cmd).arg(p).spawn().unwrap().wait();
+            is_match = true;
+            break;
         }
+        // if server_name.eq(&server.alias) {
+        //     let port = match server.port {
+        //         Some(p) => p,
+        //         _ => 22
+        //     };
+        //     let cmd = format!("{}@{}", server.username, server.address);
+        //     let p = format!("-p{}", port);
+        //     std::process::Command::new(config.ssh_client_path.to_str().unwrap())
+        //         .arg(cmd).arg(p).spawn().unwrap().wait().unwrap();
+        // }
     }
+    is_match
 }
 
 fn init() -> AppConfig {
@@ -156,17 +170,41 @@ fn init() -> AppConfig {
         let config = AppConfig {
             pub_key_path: key_path.to_path_buf(),
             server_path: server_path.to_path_buf(),
-            ssh_client_path: PathBuf::from("ssh")
+            ssh_client_path: PathBuf::from("ssh"),
         };
-        std::fs::write(config_path, serde_json::to_string(&config).unwrap()).unwrap();
+        std::fs::write(config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
     }
     let v = std::fs::read_to_string(config_path).unwrap();
-    let config: AppConfig = serde_json::from_str(&v).unwrap();
-    config
+    serde_json::from_str(&v).unwrap()
 }
 
 fn read_servers(path: PathBuf) -> ServerCollection {
     let v = std::fs::read_to_string(path).unwrap();
-    let servers: ServerCollection = serde_json::from_str(&v).unwrap();
-    servers
+    serde_json::from_str(&v).unwrap()
+}
+
+fn show_table(collection: ServerCollection) {
+    if collection.hosts.is_empty() == false {
+        let title = vec![
+            "Alias".cell().bold(true),
+            "Username".cell().bold(true),
+            "Address".cell().bold(true),
+            "Port".cell().bold(true),
+        ];
+        let mut table: Vec<Vec<CellStruct>> = Vec::new();
+        for server in collection.hosts {
+            let port = match server.port {
+                None => 22,
+                Some(p) => p
+            };
+            let col = vec![
+                server.alias.cell(),
+                server.username.cell().justify(Justify::Right),
+                server.address.cell().justify(Justify::Right),
+                port.cell().justify(Justify::Right),
+            ];
+            table.push(col);
+        }
+        print_stdout(table.table().title(title)).unwrap();
+    }
 }
