@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use dirs;
 use std::path::{PathBuf};
 use serde::{Serialize, Deserialize};
@@ -27,7 +27,7 @@ struct Server {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ServerCollection {
-    hosts: HashMap<String, Server>,
+    hosts: BTreeMap<String, Server>,
 }
 
 trait PrettyJson {
