@@ -84,7 +84,7 @@ fn main() {
                     collection.hosts.insert(alias.to_string(), server);
                     std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
                     show_table(collection);
-                },
+                }
                 _ => {
                     println!("{} was already exists", alias)
                 }
@@ -101,9 +101,13 @@ fn main() {
             match collection.hosts.get(alias) {
                 None => show_table(collection),
                 Some(server) => {
-                    println!("{:?}", server);
+                    let host = format!("{}@{}", server.username, server.address);
+                    let port = format!("-p{}", server.port.unwrap());
+                    std::process::Command::new(config.ssh_client_path)
+                        .arg(host).arg(port)
+                        .spawn().unwrap().wait().unwrap();
                 }
-            }
+            };
         }
         Some(Commands::Link {}) => {
             println!("Not printing testing lists...");
