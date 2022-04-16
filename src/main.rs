@@ -18,11 +18,11 @@ struct AppConfig {
     ssh_client_path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Server {
-    username: String,
-    address: String,
-    port: Option<u16>,
+    pub username: String,
+    pub address: String,
+    pub port: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -37,7 +37,7 @@ trait PrettyJson {
 }
 
 impl ServerCollection {
-    fn get(&self, key: &String) -> Option<&Server> {
+    fn get(&mut self, key: &String) -> Option<&Server> {
         self.hosts.get(key)
     }
     fn insert(&mut self, key: String, server: Server) -> Option<Server> {
@@ -66,6 +66,32 @@ impl ServerCollection {
         }
     }
 }
+
+// impl Server {
+//     fn update(&mut self, username: &Option<String>, address: &Option<String>, port: &Option<u16>) -> &mut Server {
+//         match username {
+//             Some(val) => {
+//                 self.username = val.to_string();
+//             }
+//             _ => {}
+//         };
+//         match address {
+//             Some(val) => {
+//                 self.address = val.to_string();
+//             }
+//             _ => {}
+//         };
+//         match port {
+//             Some(val) => {
+//                 self.port = Some(val.to_owned())
+//             }
+//             _ => {
+//                 self.port = Some(22)
+//             }
+//         };
+//         return self;
+//     }
+// }
 
 impl PrettyJson for ServerCollection {}
 
@@ -136,8 +162,24 @@ fn main() {
         }
         Some(Commands::Modify { alias, username, address, port }) => {
             match collection.get(alias) {
-                Some(_server) => {
-                    show_table(collection);
+                Some(server) => {
+                    let server = Server {
+                        username: match username {
+                            Some(val) => { val.to_string() }
+                            _ => {server.username.to_string()}
+                        },
+                        address: match address {
+                            Some(val) => { val.to_string() }
+                            _ => {server.address.to_string()}
+                        },
+                        port: match port {
+                            Some(val) => { Some(val.to_owned()) }
+                            _ => {server.port}
+                        },
+                    };
+                    collection.remove(alias);
+                    collection.insert(alias.to_string(), server);
+                    std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
                 }
                 None => {
                     println!("Cannot find specify alias")
