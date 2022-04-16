@@ -18,7 +18,7 @@ struct AppConfig {
     ssh_client_path: PathBuf,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Server {
     pub username: String,
     pub address: String,
@@ -158,7 +158,9 @@ fn main() {
         }
         Some(Commands::Remove { alias }) => {
             collection.remove(alias);
+            std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
             show_table(collection);
+
         }
         Some(Commands::Modify { alias, username, address, port }) => {
             match collection.get(alias) {
