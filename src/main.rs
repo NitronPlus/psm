@@ -36,6 +36,37 @@ trait PrettyJson {
     }
 }
 
+impl ServerCollection {
+    fn get(&self, key: &String) -> Option<&Server> {
+        self.hosts.get(key)
+    }
+    fn insert(&mut self, key: String, server: Server) -> Option<Server> {
+        self.hosts.insert(key, server)
+    }
+    fn remove(&mut self, key: &String) -> Option<Server> {
+        self.hosts.remove(key)
+    }
+    fn is_empty(&self) -> bool {
+        self.hosts.is_empty()
+    }
+
+    fn rename(&mut self, from: &String, to: &String) -> bool {
+        match self.get(from) {
+            None => { false }
+            Some(server) => {
+                let new_value = Server {
+                    username: server.username.to_string(),
+                    address: server.address.to_string(),
+                    port: server.port,
+                };
+                self.remove(from);
+                self.insert(to.to_string(), new_value);
+                true
+            }
+        }
+    }
+}
+
 impl PrettyJson for ServerCollection {}
 
 impl PrettyJson for AppConfig {}
@@ -61,7 +92,16 @@ enum Commands {
     Remove {
         alias: String,
     },
-    Modify {},
+    Modify {
+        alias: String,
+        username: Option<String>,
+        address: Option<String>,
+        port: Option<u16>,
+    },
+    Rename {
+        alias: String,
+        new_alias: String,
+    },
     Go {
         alias: String
     },
@@ -74,31 +114,46 @@ fn main() {
     let mut collection = read_servers(&config.server_path);
     match &cli.command {
         Some(Commands::Create { alias, username, address, port }) => {
-            match collection.hosts.get(alias) {
+            match collection.get(alias) {
                 None => {
                     let server = Server {
                         username: username.to_string(),
                         address: address.to_string(),
                         port: Some(port.to_owned()),
                     };
-                    collection.hosts.insert(alias.to_string(), server);
+                    collection.insert(alias.to_string(), server);
                     std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
                     show_table(collection);
                 }
                 _ => {
-                    println!("{} was already exists", alias)
+                    println!("Server alias {} was already exists", alias)
                 }
             }
         }
         Some(Commands::Remove { alias }) => {
-            collection.hosts.remove(alias);
+            collection.remove(alias);
             show_table(collection);
         }
-        Some(Commands::Modify {}) => {
-            println!("Not printing testing lists...");
+        Some(Commands::Modify { alias, username, address, port }) => {
+            match collection.get(alias) {
+                Some(_server) => {
+                    show_table(collection);
+                }
+                None => {
+                    println!("Cannot find specify alias")
+                }
+            }
+        }
+        Some(Commands::Rename { alias, new_alias }) => {
+            if collection.rename(alias, new_alias) {
+                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+                println!("Server alias {} was rename to {}", alias, new_alias);
+            } else {
+                println!("Cannot find specify alias");
+            }
         }
         Some(Commands::Go { alias }) => {
-            match collection.hosts.get(alias) {
+            match collection.get(alias) {
                 None => show_table(collection),
                 Some(server) => {
                     let host = format!("{}@{}", server.username, server.address);
@@ -110,10 +165,10 @@ fn main() {
             };
         }
         Some(Commands::Link {}) => {
-            println!("Not printing testing lists...");
+            println!("Will implement in future!");
         }
         None => {
-            if !collection.hosts.is_empty() {
+            if !collection.is_empty() {
                 show_table(collection);
             }
         }
@@ -126,10 +181,6 @@ fn get_home_dir() -> PathBuf {
         Some(t) => t,
         None => panic!("cannot find user home dir")
     }
-}
-
-fn search_server<'a>(alias: &'a String, collection: &'a ServerCollection) -> Option<&'a Server> {
-    collection.hosts.get(alias)
 }
 
 fn init() -> AppConfig {
@@ -158,7 +209,7 @@ fn read_servers(path: &PathBuf) -> ServerCollection {
 }
 
 fn show_table(collection: ServerCollection) {
-    if collection.hosts.is_empty() == false {
+    if collection.is_empty() == false {
         let title = vec![
             "Alias".cell().bold(true),
             "Username".cell().bold(true),
