@@ -33,7 +33,17 @@ trait PrettyJson {
     where
         Self: Serialize,
     {
-        serde_json::to_string_pretty(&self).unwrap()
+        serde_json::to_string_pretty(self).unwrap()
+    }
+}
+
+trait SaveToFile {
+    fn save_to(&self, path: &PathBuf)
+    where
+        Self: PrettyJson,
+        Self: Serialize,
+    {
+        std::fs::write(&path, self.pretty_json()).unwrap();
     }
 }
 
@@ -98,6 +108,10 @@ impl PrettyJson for ServerCollection {}
 
 impl PrettyJson for AppConfig {}
 
+impl SaveToFile for ServerCollection {}
+
+impl SaveToFile for AppConfig {}
+
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(arg_required_else_help(true))]
@@ -160,7 +174,7 @@ fn main() {
                     port: Some(port.to_owned()),
                 };
                 collection.insert(alias.to_string(), server);
-                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+                collection.save_to(&config.server_path);
                 show_table(&collection);
             }
             _ => {
@@ -169,7 +183,7 @@ fn main() {
         },
         Some(Commands::Remove { alias }) => {
             collection.remove(alias);
-            std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+            collection.save_to(&config.server_path);
             show_table(&collection);
         }
         Some(Commands::Modify {
@@ -195,7 +209,7 @@ fn main() {
                 };
                 collection.remove(alias);
                 collection.insert(alias.to_string(), server);
-                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+                collection.save_to(&config.server_path);
             }
             None => {
                 println!("Cannot find specify alias")
@@ -203,7 +217,7 @@ fn main() {
         },
         Some(Commands::Rename { alias, new_alias }) => {
             if collection.rename(alias, new_alias) {
-                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+                collection.save_to(&config.server_path);
                 println!("Server alias {} was rename to {}", alias, new_alias);
             } else {
                 println!("Cannot find specify alias");
@@ -259,7 +273,7 @@ fn init() -> AppConfig {
             server_path: server_path.to_path_buf(),
             ssh_client_path: PathBuf::from("ssh"),
         };
-        std::fs::write(config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
+        config.save_to(config_path);
     }
     let v = std::fs::read_to_string(config_path).unwrap();
     serde_json::from_str(&v).unwrap()
