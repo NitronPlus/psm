@@ -109,7 +109,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[clap(about = "Create alias for a remote SSH server")]
+    #[clap(about = "Create alias for a remote SSH server", name = "new")]
     Create {
         alias: String,
         username: String,
@@ -117,18 +117,18 @@ enum Commands {
         #[clap(default_value_t = 22)]
         port: u16,
     },
-    #[clap(about = "Remove the specify alias")]
+    #[clap(about = "Remove the specify alias", name = "rm")]
     Remove {
         alias: String,
     },
-    #[clap(about = "Modify the specify alias")]
+    #[clap(about = "Modify the specify alias", name = "edit")]
     Modify {
         alias: String,
         username: Option<String>,
         address: Option<String>,
         port: Option<u16>,
     },
-    #[clap(about = "Rename the specify alias")]
+    #[clap(about = "Rename the specify alias", name = "mv")]
     Rename {
         alias: String,
         new_alias: String,
