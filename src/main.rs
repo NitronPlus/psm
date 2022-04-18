@@ -1,11 +1,9 @@
-use std::collections::BTreeMap;
-use dirs;
-use std::path::{PathBuf};
-use serde::{Serialize, Deserialize};
 use clap::{Parser, Subcommand};
+use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fs;
-use serde_json;
-use cli_table::{Cell, CellStruct, format::Justify, print_stdout, Style, Table};
+use std::path::PathBuf;
 
 const SERVER: &str = r#"{
     "hosts": {}
@@ -31,7 +29,10 @@ struct ServerCollection {
 }
 
 trait PrettyJson {
-    fn pretty_json(&self) -> String where Self: Serialize {
+    fn pretty_json(&self) -> String
+    where
+        Self: Serialize,
+    {
         serde_json::to_string_pretty(&self).unwrap()
     }
 }
@@ -52,7 +53,7 @@ impl ServerCollection {
 
     fn rename(&mut self, from: &String, to: &String) -> bool {
         match self.get(from) {
-            None => { false }
+            None => false,
             Some(server) => {
                 let new_value = Server {
                     username: server.username.to_string(),
@@ -97,14 +98,11 @@ impl PrettyJson for ServerCollection {}
 
 impl PrettyJson for AppConfig {}
 
-
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(arg_required_else_help(true))]
 #[clap(subcommand_negates_reqs(true))]
 struct Cli {
-    #[clap(help = "Connect to the specify alias server")]
-    alias: String,
     #[clap(subcommand)]
     command: Option<Commands>,
 }
@@ -137,7 +135,7 @@ enum Commands {
     },
     #[clap(about = "Connect to the specify alias server")]
     Go {
-        alias: String
+        alias: String,
     },
     #[clap(about = "List all alias server", name = "ls")]
     List {},
@@ -148,67 +146,61 @@ fn main() {
     let config = init();
     let cli = Cli::parse();
     let mut collection = read_servers(&config.server_path);
-    match collection.get(&cli.alias) {
-        None => {
-            show_table(&collection);
-        }
-        Some(server) => {
-            let host = format!("{}@{}", server.username, server.address);
-            let port = format!("-p{}", server.port.unwrap());
-            std::process::Command::new(&config.ssh_client_path)
-                .arg(host).arg(port)
-                .spawn().unwrap().wait().unwrap();
-        }
-    }
     match &cli.command {
-        Some(Commands::Create { alias, username, address, port }) => {
-            match collection.get(alias) {
-                None => {
-                    let server = Server {
-                        username: username.to_string(),
-                        address: address.to_string(),
-                        port: Some(port.to_owned()),
-                    };
-                    collection.insert(alias.to_string(), server);
-                    std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
-                    show_table(&collection);
-                }
-                _ => {
-                    println!("Server alias {} was already exists", alias)
-                }
+        Some(Commands::Create {
+            alias,
+            username,
+            address,
+            port,
+        }) => match collection.get(alias) {
+            None => {
+                let server = Server {
+                    username: username.to_string(),
+                    address: address.to_string(),
+                    port: Some(port.to_owned()),
+                };
+                collection.insert(alias.to_string(), server);
+                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
+                show_table(&collection);
             }
-        }
+            _ => {
+                println!("Server alias {} was already exists", alias)
+            }
+        },
         Some(Commands::Remove { alias }) => {
             collection.remove(alias);
             std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
             show_table(&collection);
         }
-        Some(Commands::Modify { alias, username, address, port }) => {
-            match collection.get(alias) {
-                Some(server) => {
-                    let server = Server {
-                        username: match username {
-                            Some(val) => { val.to_string() }
-                            _ => { server.username.to_string() }
-                        },
-                        address: match address {
-                            Some(val) => { val.to_string() }
-                            _ => { server.address.to_string() }
-                        },
-                        port: match port {
-                            Some(val) => { Some(val.to_owned()) }
-                            _ => { server.port }
-                        },
-                    };
-                    collection.remove(alias);
-                    collection.insert(alias.to_string(), server);
-                    std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
-                }
-                None => {
-                    println!("Cannot find specify alias")
-                }
+        Some(Commands::Modify {
+            alias,
+            username,
+            address,
+            port,
+        }) => match collection.get(alias) {
+            Some(server) => {
+                let server = Server {
+                    username: match username {
+                        Some(val) => val.to_string(),
+                        _ => server.username.to_string(),
+                    },
+                    address: match address {
+                        Some(val) => val.to_string(),
+                        _ => server.address.to_string(),
+                    },
+                    port: match port {
+                        Some(val) => Some(val.to_owned()),
+                        _ => server.port,
+                    },
+                };
+                collection.remove(alias);
+                collection.insert(alias.to_string(), server);
+                std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
             }
-        }
+            None => {
+                println!("Cannot find specify alias")
+            }
+        },
         Some(Commands::Rename { alias, new_alias }) => {
             if collection.rename(alias, new_alias) {
                 std::fs::write(&config.server_path, collection.pretty_json()).unwrap();
@@ -223,9 +215,13 @@ fn main() {
                 Some(server) => {
                     let host = format!("{}@{}", server.username, server.address);
                     let port = format!("-p{}", server.port.unwrap());
-                    std::process::Command::new(config.ssh_client_path)
-                        .arg(host).arg(port)
-                        .spawn().unwrap().wait().unwrap();
+                    std::process::Command::new(&config.ssh_client_path)
+                        .arg(host)
+                        .arg(port)
+                        .spawn()
+                        .unwrap()
+                        .wait()
+                        .unwrap();
                 }
             };
         }
@@ -245,13 +241,13 @@ fn get_home_dir() -> PathBuf {
     let dir = dirs::home_dir();
     match dir {
         Some(t) => t,
-        None => panic!("cannot find user home dir")
+        None => panic!("cannot find user home dir"),
     }
 }
 
 fn init() -> AppConfig {
     let home_dir = get_home_dir();
-    let app_config_path = &home_dir.join(".".to_owned() + option_env!("CARGO_PKG_NAME").unwrap());
+    let app_config_path = &home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME"));
     let key_path = &home_dir.join(".ssh").join("id_rsa.pub");
     let server_path = &app_config_path.join("server.json");
     let config_path = &app_config_path.join("config.json");
@@ -275,7 +271,7 @@ fn read_servers(path: &PathBuf) -> ServerCollection {
 }
 
 fn show_table(collection: &ServerCollection) {
-    if collection.is_empty() == false {
+    if !collection.is_empty() {
         let title = vec![
             "Alias".cell().bold(true),
             "Username".cell().bold(true),
@@ -284,10 +280,7 @@ fn show_table(collection: &ServerCollection) {
         ];
         let mut table: Vec<Vec<CellStruct>> = Vec::new();
         for (alias, server) in &collection.hosts {
-            let port = match server.port {
-                None => 22,
-                Some(p) => p
-            };
+            let port = server.port.unwrap_or(22);
             let col = vec![
                 alias.cell(),
                 server.username.to_string().cell().justify(Justify::Right),
