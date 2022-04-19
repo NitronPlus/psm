@@ -5,10 +5,6 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 
-const SERVER: &str = r#"{
-    "hosts": {}
-}"#;
-
 #[derive(Serialize, Deserialize, Debug)]
 struct AppConfig {
     pub_key_path: PathBuf,
@@ -44,6 +40,35 @@ trait SaveToFile {
         Self: Serialize,
     {
         std::fs::write(&path, self.pretty_json()).unwrap();
+    }
+}
+
+impl AppConfig {
+    fn init() -> Self {
+        match dirs::home_dir() {
+            Some(home_dir) => {
+                let app_config_path = home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME"));
+                let key_path = &home_dir.join(".ssh").join("id_rsa.pub");
+                let server_path = &app_config_path.join("server.json");
+                let config_path = &app_config_path.join("config.json");
+                if !app_config_path.exists() {
+                    let hosts: &str = r#"{
+                        "hosts": {}
+                    }"#;
+                    fs::create_dir(&app_config_path).unwrap();
+                    std::fs::write(server_path, hosts).unwrap();
+                    let config = AppConfig {
+                        pub_key_path: key_path.to_path_buf(),
+                        server_path: server_path.to_path_buf(),
+                        ssh_client_path: PathBuf::from("ssh"),
+                    };
+                    config.save_to(config_path);
+                }
+                let v = std::fs::read_to_string(config_path).unwrap();
+                serde_json::from_str(&v).unwrap()
+            }
+            None => panic!("cannot find user home dir"),
+        }
     }
 }
 
@@ -154,7 +179,7 @@ enum Commands {
 }
 
 fn main() {
-    let config = init();
+    let config = AppConfig::init();
     let cli = Cli::parse();
     let mut collection = read_servers(&config.server_path);
     match &cli.command {
@@ -240,34 +265,6 @@ fn main() {
         }
         None => {}
     }
-}
-
-fn get_home_dir() -> PathBuf {
-    let dir = dirs::home_dir();
-    match dir {
-        Some(t) => t,
-        None => panic!("cannot find user home dir"),
-    }
-}
-
-fn init() -> AppConfig {
-    let home_dir = get_home_dir();
-    let app_config_path = &home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME"));
-    let key_path = &home_dir.join(".ssh").join("id_rsa.pub");
-    let server_path = &app_config_path.join("server.json");
-    let config_path = &app_config_path.join("config.json");
-    if !app_config_path.exists() {
-        fs::create_dir(&app_config_path).unwrap();
-        std::fs::write(server_path, self::SERVER).unwrap();
-        let config = AppConfig {
-            pub_key_path: key_path.to_path_buf(),
-            server_path: server_path.to_path_buf(),
-            ssh_client_path: PathBuf::from("ssh"),
-        };
-        config.save_to(config_path);
-    }
-    let v = std::fs::read_to_string(config_path).unwrap();
-    serde_json::from_str(&v).unwrap()
 }
 
 fn read_servers(path: &PathBuf) -> ServerCollection {
