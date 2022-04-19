@@ -54,8 +54,9 @@ impl ServerCollection {
     fn insert(&mut self, key: String, server: Server) -> Option<Server> {
         self.hosts.insert(key, server)
     }
-    fn remove(&mut self, key: &String) -> Option<Server> {
-        self.hosts.remove(key)
+    fn remove(&mut self, key: &String) -> &mut ServerCollection {
+        self.hosts.remove(key);
+        self
     }
     fn is_empty(&self) -> bool {
         self.hosts.is_empty()
@@ -70,39 +71,35 @@ impl ServerCollection {
                     address: server.address.to_string(),
                     port: server.port,
                 };
-                self.remove(from);
-                self.insert(to.to_string(), new_value);
+                self.remove(from).insert(to.to_string(), new_value);
                 true
             }
         }
     }
-}
 
-// impl Server {
-//     fn update(&mut self, username: &Option<String>, address: &Option<String>, port: &Option<u16>) -> &mut Server {
-//         match username {
-//             Some(val) => {
-//                 self.username = val.to_string();
-//             }
-//             _ => {}
-//         };
-//         match address {
-//             Some(val) => {
-//                 self.address = val.to_string();
-//             }
-//             _ => {}
-//         };
-//         match port {
-//             Some(val) => {
-//                 self.port = Some(val.to_owned())
-//             }
-//             _ => {
-//                 self.port = Some(22)
-//             }
-//         };
-//         return self;
-//     }
-// }
+    fn show_table(&self) {
+        if !self.is_empty() {
+            let title = vec![
+                "Alias".cell().bold(true),
+                "Username".cell().bold(true),
+                "Address".cell().bold(true),
+                "Port".cell().bold(true),
+            ];
+            let mut table: Vec<Vec<CellStruct>> = Vec::new();
+            for (alias, server) in &self.hosts {
+                let port = server.port.unwrap_or(22);
+                let col = vec![
+                    alias.cell(),
+                    server.username.to_string().cell().justify(Justify::Right),
+                    server.address.to_string().cell().justify(Justify::Right),
+                    port.cell().justify(Justify::Right),
+                ];
+                table.push(col);
+            }
+            print_stdout(table.table().title(title)).unwrap();
+        }
+    }
+}
 
 impl PrettyJson for ServerCollection {}
 
@@ -174,17 +171,14 @@ fn main() {
                     port: Some(port.to_owned()),
                 };
                 collection.insert(alias.to_string(), server);
-                collection.save_to(&config.server_path);
-                show_table(&collection);
+                collection.show_table();
             }
             _ => {
                 println!("Server alias {} was already exists", alias)
             }
         },
         Some(Commands::Remove { alias }) => {
-            collection.remove(alias);
-            collection.save_to(&config.server_path);
-            show_table(&collection);
+            collection.remove(alias).show_table();
         }
         Some(Commands::Modify {
             alias,
@@ -207,8 +201,7 @@ fn main() {
                         _ => server.port,
                     },
                 };
-                collection.remove(alias);
-                collection.insert(alias.to_string(), server);
+                collection.remove(alias).insert(alias.to_string(), server);
                 collection.save_to(&config.server_path);
             }
             None => {
@@ -225,7 +218,7 @@ fn main() {
         }
         Some(Commands::Go { alias }) => {
             match collection.get(alias) {
-                None => show_table(&collection),
+                None => collection.show_table(),
                 Some(server) => {
                     let host = format!("{}@{}", server.username, server.address);
                     let port = format!("-p{}", server.port.unwrap());
@@ -243,9 +236,7 @@ fn main() {
             println!("Will implement in future!");
         }
         Some(Commands::List {}) => {
-            if !collection.is_empty() {
-                show_table(&collection);
-            }
+            collection.show_table();
         }
         None => {}
     }
@@ -282,27 +273,4 @@ fn init() -> AppConfig {
 fn read_servers(path: &PathBuf) -> ServerCollection {
     let v = std::fs::read_to_string(&path).unwrap();
     serde_json::from_str(&v).unwrap()
-}
-
-fn show_table(collection: &ServerCollection) {
-    if !collection.is_empty() {
-        let title = vec![
-            "Alias".cell().bold(true),
-            "Username".cell().bold(true),
-            "Address".cell().bold(true),
-            "Port".cell().bold(true),
-        ];
-        let mut table: Vec<Vec<CellStruct>> = Vec::new();
-        for (alias, server) in &collection.hosts {
-            let port = server.port.unwrap_or(22);
-            let col = vec![
-                alias.cell(),
-                server.username.to_string().cell().justify(Justify::Right),
-                server.address.to_string().cell().justify(Justify::Right),
-                port.cell().justify(Justify::Right),
-            ];
-            table.push(col);
-        }
-        print_stdout(table.table().title(title)).unwrap();
-    }
 }
