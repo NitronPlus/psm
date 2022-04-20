@@ -53,7 +53,12 @@ Show command/subcommand help
 > psm help subcommand  // show specify subcommand help
 ```
 
+## Todo
 
+- [x] Basic feature (List/Create/Remove/Rename/Modify/Connect)
+- [ ] Different RSA key for each alias
+- [ ] Config use cli
+- [ ] Test
 
 ## License
 

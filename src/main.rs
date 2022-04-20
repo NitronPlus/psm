@@ -149,7 +149,6 @@ impl ServerCollection {
     }
 }
 
-
 impl PrettyJson for ServerCollection {}
 
 impl PrettyJson for Config {}
