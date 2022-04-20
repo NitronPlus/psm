@@ -14,9 +14,9 @@ struct AppConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Server {
-    pub username: String,
-    pub address: String,
-    pub port: Option<u16>,
+    username: String,
+    address: String,
+    port: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -113,7 +113,7 @@ impl ServerCollection {
             ];
             let mut table: Vec<Vec<CellStruct>> = Vec::new();
             for (alias, server) in &self.hosts {
-                let port = server.port.unwrap_or(22);
+                let port = server.port;
                 let col = vec![
                     alias.cell(),
                     server.username.to_string().cell().justify(Justify::Right),
@@ -198,7 +198,7 @@ fn main() {
                 let server = Server {
                     username: username.to_string(),
                     address: address.to_string(),
-                    port: Some(port.to_owned()),
+                    port: port.to_owned(),
                 };
                 collection
                     .insert(alias.to_string(), server)
@@ -230,7 +230,7 @@ fn main() {
                         _ => server.address.to_string(),
                     },
                     port: match port {
-                        Some(val) => Some(val.to_owned()),
+                        Some(val) => val.to_owned(),
                         _ => server.port,
                     },
                 };
@@ -256,7 +256,7 @@ fn main() {
                 None => collection.show_table(),
                 Some(server) => {
                     let host = format!("{}@{}", server.username, server.address);
-                    let port = format!("-p{}", server.port.unwrap());
+                    let port = format!("-p{}", server.port);
                     std::process::Command::new(&config.ssh_client_path)
                         .arg(host)
                         .arg(port)
