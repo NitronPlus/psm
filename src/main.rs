@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct AppConfig {
+struct Config {
     pub_key_path: PathBuf,
     server_path: PathBuf,
     ssh_client_path: PathBuf,
@@ -43,7 +43,7 @@ trait SaveToFile {
     }
 }
 
-impl AppConfig {
+impl Config {
     fn init() -> Self {
         match dirs::home_dir() {
             Some(home_dir) => {
@@ -52,12 +52,12 @@ impl AppConfig {
                 let server_path = &app_config_path.join("server.json");
                 let config_path = &app_config_path.join("config.json");
                 if !app_config_path.exists() {
-                    let hosts: &str = r#"{
-                        "hosts": {}
-                    }"#;
+                    let init_collection = ServerCollection {
+                        hosts: BTreeMap::new(),
+                    };
                     fs::create_dir(&app_config_path).unwrap();
-                    std::fs::write(server_path, hosts).unwrap();
-                    let config = AppConfig {
+                    std::fs::write(server_path, init_collection.pretty_json()).unwrap();
+                    let config = Config {
                         pub_key_path: key_path.to_path_buf(),
                         server_path: server_path.to_path_buf(),
                         ssh_client_path: PathBuf::from("ssh"),
@@ -72,18 +72,35 @@ impl AppConfig {
     }
 }
 
+impl Server {
+    fn connect(&self, config: &Config) {
+        let host = format!("{}@{}", self.username, self.address);
+        let port = format!("-p{}", self.port);
+        std::process::Command::new(&config.ssh_client_path)
+            .arg(host)
+            .arg(port)
+            .spawn()
+            .unwrap()
+            .wait()
+            .unwrap();
+    }
+}
+
 impl ServerCollection {
     fn get(&mut self, key: &String) -> Option<&Server> {
         self.hosts.get(key)
     }
+
     fn insert(&mut self, key: String, server: Server) -> &mut ServerCollection {
         self.hosts.insert(key, server);
         self
     }
+
     fn remove(&mut self, key: &String) -> &mut ServerCollection {
         self.hosts.remove(key);
         self
     }
+
     fn is_empty(&self) -> bool {
         self.hosts.is_empty()
     }
@@ -125,15 +142,21 @@ impl ServerCollection {
             print_stdout(table.table().title(title)).unwrap();
         }
     }
+
+    fn load(path: &PathBuf) -> Self {
+        let v = std::fs::read_to_string(&path).unwrap();
+        serde_json::from_str(&v).unwrap()
+    }
 }
+
 
 impl PrettyJson for ServerCollection {}
 
-impl PrettyJson for AppConfig {}
+impl PrettyJson for Config {}
 
 impl SaveToFile for ServerCollection {}
 
-impl SaveToFile for AppConfig {}
+impl SaveToFile for Config {}
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -184,9 +207,9 @@ enum Commands {
 }
 
 fn main() {
-    let config = AppConfig::init();
+    let config = Config::init();
     let cli = Cli::parse();
-    let mut collection = read_servers(&config.server_path);
+    let mut collection = ServerCollection::load(&config.server_path);
     match &cli.command {
         Some(Commands::Create {
             alias,
@@ -255,15 +278,7 @@ fn main() {
             match collection.get(alias) {
                 None => collection.show_table(),
                 Some(server) => {
-                    let host = format!("{}@{}", server.username, server.address);
-                    let port = format!("-p{}", server.port);
-                    std::process::Command::new(&config.ssh_client_path)
-                        .arg(host)
-                        .arg(port)
-                        .spawn()
-                        .unwrap()
-                        .wait()
-                        .unwrap();
+                    server.connect(&config);
                 }
             };
         }
@@ -275,9 +290,4 @@ fn main() {
         }
         None => {}
     }
-}
-
-fn read_servers(path: &PathBuf) -> ServerCollection {
-    let v = std::fs::read_to_string(&path).unwrap();
-    serde_json::from_str(&v).unwrap()
 }

@@ -1,9 +1,11 @@
 [package]
 name = "psm"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
-authors = ["Zachary"]
-description = "A cli tool for multi ssh remote server management."
+license = "MIT"
+authors = ["Zachary S <cn.zachary@gmail.com>"]
+description = "A cli tool for multi remote SSH server management."
+repository = "https://github.com/NitronPlus/psm"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
