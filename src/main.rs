@@ -76,8 +76,9 @@ impl ServerCollection {
     fn get(&mut self, key: &String) -> Option<&Server> {
         self.hosts.get(key)
     }
-    fn insert(&mut self, key: String, server: Server) -> Option<Server> {
-        self.hosts.insert(key, server)
+    fn insert(&mut self, key: String, server: Server) -> &mut ServerCollection {
+        self.hosts.insert(key, server);
+        self
     }
     fn remove(&mut self, key: &String) -> &mut ServerCollection {
         self.hosts.remove(key);
@@ -145,7 +146,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    #[clap(about = "Create alias for a remote SSH server", name = "new", display_order = 3)]
+    #[clap(
+        about = "Create alias for a remote SSH server",
+        name = "new",
+        display_order = 3
+    )]
     Create {
         alias: String,
         username: String,
@@ -154,31 +159,27 @@ enum Commands {
         port: u16,
     },
     #[clap(about = "Remove the specify alias", name = "rm", display_order = 4)]
-    Remove {
-        alias: String,
-    },
+    Remove { alias: String },
     #[clap(about = "Modify the specify alias", name = "upd", display_order = 6)]
     Modify {
         alias: String,
-        #[clap(short ,display_order = 1)]
+        #[clap(short, display_order = 1)]
         username: Option<String>,
-        #[clap(short ,display_order = 2)]
+        #[clap(short, display_order = 2)]
         address: Option<String>,
-        #[clap(short ,display_order = 3)]
+        #[clap(short, display_order = 3)]
         port: Option<u16>,
     },
     #[clap(about = "Rename the specify alias", name = "mv", display_order = 5)]
-    Rename {
-        alias: String,
-        new_alias: String,
-    },
+    Rename { alias: String, new_alias: String },
     #[clap(about = "Connect to the specify server alias", display_order = 1)]
-    Go {
-        alias: String,
-    },
+    Go { alias: String },
     #[clap(about = "List all server alias", name = "ls", display_order = 2)]
     List {},
-    #[clap(about = "Copy rsa pub key to remote server(not implement!)", name = "cp")]
+    #[clap(
+        about = "Copy rsa pub key to remote server(not implement!)",
+        name = "cp"
+    )]
     Link {},
 }
 
@@ -199,7 +200,9 @@ fn main() {
                     address: address.to_string(),
                     port: Some(port.to_owned()),
                 };
-                collection.insert(alias.to_string(), server);
+                collection
+                    .insert(alias.to_string(), server)
+                    .save_to(&config.server_path);
                 collection.show_table();
             }
             _ => {
@@ -231,8 +234,10 @@ fn main() {
                         _ => server.port,
                     },
                 };
-                collection.remove(alias).insert(alias.to_string(), server);
-                collection.save_to(&config.server_path);
+                collection
+                    .remove(alias)
+                    .insert(alias.to_string(), server)
+                    .save_to(&config.server_path);
             }
             None => {
                 println!("Cannot find specify alias")
