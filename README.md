@@ -17,40 +17,40 @@ Show list
 Create a server alias
 
 ```bash
-psm new alias_name username server_address ssh_port(optional, defautl is 22)
+> psm new alias_name username server_address ssh_port(optional, defautl is 22)
 ```
 
 Connect to an aliased server
 
 ```bash
-psm go alias_name
+> psm go alias_name
 ```
 
 Rename an alias
 
 ```bash
-psm mv old_alias_name new_alias_name
+> psm mv old_alias_name new_alias_name
 ```
 
 Remove an alias
 ```bash
-psm rm alias
+> psm rm alias
 ```
 
 Modify alias fields, it just modifies the present fields. 
 
 ```bash
-psm edit alias_name -u username -a server_address -p port // will modifiy all fields
-psm edit alias_name -u username // just modify username
-psm edit alias_name -p port // just modify port
-psm edit alias_name -u username -p port // just modify username and port
+> psm upd alias_name -u username -a server_address -p port // will modifiy all fields
+> psm upd alias_name -u username // just modify username
+> psm upd alias_name -p port // just modify port
+> psm upd alias_name -u username -p port // just modify username and port
 ```
 
 Show command/subcommand help
 
 ```bash
-psm help // show command help
-psm help subcommand  // show specify subcommand help
+> psm help // show command help
+> psm help subcommand  // show specify subcommand help
 ```
 
 

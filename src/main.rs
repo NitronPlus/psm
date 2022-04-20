@@ -157,7 +157,7 @@ enum Commands {
     Remove {
         alias: String,
     },
-    #[clap(about = "Modify the specify alias", name = "edit", display_order = 6)]
+    #[clap(about = "Modify the specify alias", name = "upd", display_order = 6)]
     Modify {
         alias: String,
         #[clap(short ,display_order = 1)]
@@ -207,7 +207,8 @@ fn main() {
             }
         },
         Some(Commands::Remove { alias }) => {
-            collection.remove(alias).show_table();
+            collection.remove(alias).save_to(&config.server_path);
+            println!("Server alias {} have been removed", alias)
         }
         Some(Commands::Modify {
             alias,
@@ -240,7 +241,7 @@ fn main() {
         Some(Commands::Rename { alias, new_alias }) => {
             if collection.rename(alias, new_alias) {
                 collection.save_to(&config.server_path);
-                println!("Server alias {} was rename to {}", alias, new_alias);
+                println!("Server alias {} have been rename to {}", alias, new_alias);
             } else {
                 println!("Cannot find specify alias");
             }
