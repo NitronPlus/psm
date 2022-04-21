@@ -4,7 +4,7 @@
 
 ## Introduction
 
-> A cli tool for multi ssh remote server management.
+> A cli tool for multi remote SSH server management.
 
 ## How To Use
 

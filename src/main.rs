@@ -52,11 +52,9 @@ impl Config {
                 let server_path = &app_config_path.join("server.json");
                 let config_path = &app_config_path.join("config.json");
                 if !app_config_path.exists() {
-                    let init_collection = ServerCollection {
-                        hosts: BTreeMap::new(),
-                    };
+                    let default_collection = ServerCollection::default();
                     fs::create_dir(&app_config_path).unwrap();
-                    std::fs::write(server_path, init_collection.pretty_json()).unwrap();
+                    std::fs::write(server_path, default_collection.pretty_json()).unwrap();
                     let config = Config {
                         pub_key_path: key_path.to_path_buf(),
                         server_path: server_path.to_path_buf(),
@@ -64,11 +62,15 @@ impl Config {
                     };
                     config.save_to(config_path);
                 }
-                let v = std::fs::read_to_string(config_path).unwrap();
-                serde_json::from_str(&v).unwrap()
+                Config::load(config_path)
             }
             None => panic!("cannot find user home dir"),
         }
+    }
+
+    fn load(path: &PathBuf) -> Self {
+        let v = std::fs::read_to_string(&path).unwrap();
+        serde_json::from_str(&v).unwrap()
     }
 }
 
@@ -87,6 +89,12 @@ impl Server {
 }
 
 impl ServerCollection {
+    fn default() -> Self {
+        ServerCollection {
+            hosts: BTreeMap::new(),
+        }
+    }
+
     fn get(&mut self, key: &String) -> Option<&Server> {
         self.hosts.get(key)
     }
