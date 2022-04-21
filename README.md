@@ -56,6 +56,7 @@ Show command/subcommand help
 ## Todo
 
 - [x] Basic feature (List/Create/Remove/Rename/Modify/Connect)
+- [ ] Copy public RSA key to server
 - [ ] Different RSA key for each alias
 - [ ] Config use cli
 - [ ] Test
