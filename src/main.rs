@@ -3,7 +3,7 @@ use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Config {
@@ -25,22 +25,13 @@ struct ServerCollection {
 }
 
 trait PrettyJson {
-    fn pretty_json(&self) -> String
-    where
-        Self: Serialize,
-    {
-        serde_json::to_string_pretty(self).unwrap()
-    }
+    fn pretty_json(&self) -> String;
 }
 
 trait SaveToFile {
-    fn save_to(&self, path: &PathBuf)
+    fn save_to(&self, path: &Path)
     where
-        Self: PrettyJson,
-        Self: Serialize,
-    {
-        std::fs::write(&path, self.pretty_json()).unwrap();
-    }
+        Self: Serialize;
 }
 
 impl Config {
@@ -48,28 +39,28 @@ impl Config {
         match dirs::home_dir() {
             Some(home_dir) => {
                 let app_config_path = home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME"));
-                let key_path = &home_dir.join(".ssh").join("id_rsa.pub");
-                let server_path = &app_config_path.join("server.json");
-                let config_path = &app_config_path.join("config.json");
+                let pub_key_path = home_dir.join(".ssh").join("id_rsa.pub");
+                let server_path = app_config_path.join("server.json");
+                let config_path = app_config_path.join("config.json");
                 if !app_config_path.exists() {
                     let default_collection = ServerCollection::default();
                     fs::create_dir(&app_config_path).unwrap();
-                    std::fs::write(server_path, default_collection.pretty_json()).unwrap();
+                    std::fs::write(&server_path, default_collection.pretty_json()).unwrap();
                     let config = Config {
-                        pub_key_path: key_path.to_path_buf(),
-                        server_path: server_path.to_path_buf(),
+                        pub_key_path,
+                        server_path,
                         ssh_client_path: PathBuf::from("ssh"),
                     };
-                    config.save_to(config_path);
+                    config.save_to(&config_path);
                 }
-                Config::load(config_path)
+                Config::load(&config_path)
             }
             None => panic!("cannot find user home dir"),
         }
     }
 
-    fn load(path: &PathBuf) -> Self {
-        let v = std::fs::read_to_string(&path).unwrap();
+    fn load(path: &Path) -> Self {
+        let v = std::fs::read_to_string(path).unwrap();
         serde_json::from_str(&v).unwrap()
     }
 }
@@ -151,19 +142,26 @@ impl ServerCollection {
         }
     }
 
-    fn load(path: &PathBuf) -> Self {
-        let v = std::fs::read_to_string(&path).unwrap();
+    fn load(path: &Path) -> Self {
+        let v = std::fs::read_to_string(path).unwrap();
         serde_json::from_str(&v).unwrap()
     }
 }
 
-impl PrettyJson for ServerCollection {}
+impl<T: Serialize> PrettyJson for T {
+    fn pretty_json(&self) -> String {
+        serde_json::to_string_pretty(self).unwrap()
+    }
+}
 
-impl PrettyJson for Config {}
-
-impl SaveToFile for ServerCollection {}
-
-impl SaveToFile for Config {}
+impl<'a, T: Deserialize<'a>> SaveToFile for T {
+    fn save_to(&self, path: &Path)
+    where
+        Self: PrettyJson,
+    {
+        std::fs::write(path, self.pretty_json()).unwrap();
+    }
+}
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
