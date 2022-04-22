@@ -29,7 +29,7 @@ trait PrettyJson {
 }
 
 trait SaveToFile {
-    fn save_to(&self, path: &Path)
+    fn save_to<P: AsRef<Path>>(&self, path: P)
     where
         Self: Serialize;
 }
@@ -59,7 +59,7 @@ impl Config {
         }
     }
 
-    fn load(path: &Path) -> Self {
+    fn load<P: AsRef<Path>>(path: P) -> Self {
         let v = std::fs::read_to_string(path).unwrap();
         serde_json::from_str(&v).unwrap()
     }
@@ -142,7 +142,7 @@ impl ServerCollection {
         }
     }
 
-    fn load(path: &Path) -> Self {
+    fn load<P: AsRef<Path>>(path: P) -> Self {
         let v = std::fs::read_to_string(path).unwrap();
         serde_json::from_str(&v).unwrap()
     }
@@ -155,7 +155,7 @@ impl<T: Serialize> PrettyJson for T {
 }
 
 impl<'a, T: Deserialize<'a>> SaveToFile for T {
-    fn save_to(&self, path: &Path)
+    fn save_to<P: AsRef<Path>>(&self, path: P)
     where
         Self: PrettyJson,
     {
