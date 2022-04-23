@@ -43,9 +43,8 @@ impl Config {
                 let server_path = app_config_path.join("server.json");
                 let config_path = app_config_path.join("config.json");
                 if !app_config_path.exists() {
-                    let default_collection = ServerCollection::default();
                     fs::create_dir(&app_config_path).unwrap();
-                    std::fs::write(&server_path, default_collection.pretty_json()).unwrap();
+                    ServerCollection::init(&server_path);
                     let config = Config {
                         pub_key_path,
                         server_path,
@@ -80,10 +79,11 @@ impl Server {
 }
 
 impl ServerCollection {
-    fn default() -> Self {
-        ServerCollection {
+    fn init(path: &Path) {
+        Self {
             hosts: BTreeMap::new(),
         }
+        .save_to(path);
     }
 
     fn get(&mut self, key: &String) -> Option<&Server> {
@@ -154,11 +154,8 @@ impl<T: Serialize> PrettyJson for T {
     }
 }
 
-impl<'a, T: Deserialize<'a>> SaveToFile for T {
-    fn save_to<P: AsRef<Path>>(&self, path: P)
-    where
-        Self: PrettyJson,
-    {
+impl<T: PrettyJson> SaveToFile for T {
+    fn save_to<P: AsRef<Path>>(&self, path: P) {
         std::fs::write(path, self.pretty_json()).unwrap();
     }
 }
