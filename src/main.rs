@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
@@ -34,6 +35,13 @@ trait SaveToFile {
         Self: Serialize;
 }
 
+trait ReadFromFile {
+    fn read_from_file<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> T {
+        let v = std::fs::read_to_string(path).unwrap();
+        serde_json::from_str::<T>(&v).unwrap()
+    }
+}
+
 impl Config {
     fn init() -> Self {
         match dirs::home_dir() {
@@ -52,15 +60,10 @@ impl Config {
                     };
                     config.save_to(&config_path);
                 }
-                Config::load(&config_path)
+                Config::read_from_file(&config_path)
             }
             None => panic!("cannot find user home dir"),
         }
-    }
-
-    fn load<P: AsRef<Path>>(path: P) -> Self {
-        let v = std::fs::read_to_string(path).unwrap();
-        serde_json::from_str(&v).unwrap()
     }
 }
 
@@ -90,12 +93,12 @@ impl ServerCollection {
         self.hosts.get(key)
     }
 
-    fn insert(&mut self, key: String, server: Server) -> &mut ServerCollection {
+    fn insert(&mut self, key: String, server: Server) -> &mut Self {
         self.hosts.insert(key, server);
         self
     }
 
-    fn remove(&mut self, key: &String) -> &mut ServerCollection {
+    fn remove(&mut self, key: &String) -> &mut Self {
         self.hosts.remove(key);
         self
     }
@@ -141,11 +144,6 @@ impl ServerCollection {
             print_stdout(table.table().title(title)).unwrap();
         }
     }
-
-    fn load<P: AsRef<Path>>(path: P) -> Self {
-        let v = std::fs::read_to_string(path).unwrap();
-        serde_json::from_str(&v).unwrap()
-    }
 }
 
 impl<T: Serialize> PrettyJson for T {
@@ -159,6 +157,8 @@ impl<T: PrettyJson> SaveToFile for T {
         std::fs::write(path, self.pretty_json()).unwrap();
     }
 }
+
+impl<T: DeserializeOwned> ReadFromFile for T {}
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -208,88 +208,97 @@ enum Commands {
     Link {},
 }
 
-fn main() {
-    let config = Config::init();
-    let cli = Cli::parse();
-    let mut collection = ServerCollection::load(&config.server_path);
-    match &cli.command {
-        Some(Commands::Create {
-            alias,
-            username,
-            address,
-            port,
-        }) => match collection.get(alias) {
-            None => {
-                let server = Server {
-                    username: username.to_string(),
-                    address: address.to_string(),
-                    port: port.to_owned(),
+struct App {}
+
+impl App {
+    fn run() {
+        let config = Config::init();
+        let cli = Cli::parse();
+        let mut collection: ServerCollection =
+            ServerCollection::read_from_file(&config.server_path);
+        match &cli.command {
+            Some(Commands::Create {
+                alias,
+                username,
+                address,
+                port,
+            }) => match collection.get(alias) {
+                None => {
+                    let server = Server {
+                        username: username.to_string(),
+                        address: address.to_string(),
+                        port: port.to_owned(),
+                    };
+                    collection
+                        .insert(alias.to_string(), server)
+                        .save_to(&config.server_path);
+                    collection.show_table();
+                }
+                _ => {
+                    println!("Server alias {} was already exists", alias)
+                }
+            },
+            Some(Commands::Remove { alias }) => {
+                collection.remove(alias).save_to(&config.server_path);
+                println!("Server alias {} have been removed", alias)
+            }
+            Some(Commands::Modify {
+                alias,
+                username,
+                address,
+                port,
+            }) => match collection.get(alias) {
+                Some(server) => {
+                    let server = Server {
+                        username: match username {
+                            Some(val) => val.to_string(),
+                            _ => server.username.to_string(),
+                        },
+                        address: match address {
+                            Some(val) => val.to_string(),
+                            _ => server.address.to_string(),
+                        },
+                        port: match port {
+                            Some(val) => val.to_owned(),
+                            _ => server.port,
+                        },
+                    };
+                    collection
+                        .remove(alias)
+                        .insert(alias.to_string(), server)
+                        .save_to(&config.server_path);
+                }
+                None => {
+                    println!("Cannot find specify alias")
+                }
+            },
+            Some(Commands::Rename { alias, new_alias }) => {
+                if collection.rename(alias, new_alias) {
+                    collection.save_to(&config.server_path);
+                    println!("Server alias {} have been rename to {}", alias, new_alias);
+                } else {
+                    println!("Cannot find specify alias");
+                }
+            }
+            Some(Commands::Go { alias }) => {
+                match collection.get(alias) {
+                    None => collection.show_table(),
+                    Some(server) => {
+                        server.connect(&config);
+                    }
                 };
-                collection
-                    .insert(alias.to_string(), server)
-                    .save_to(&config.server_path);
+            }
+            Some(Commands::Link {}) => {
+                println!("Will implement in future!");
+            }
+            Some(Commands::List {}) => {
                 collection.show_table();
             }
-            _ => {
-                println!("Server alias {} was already exists", alias)
-            }
-        },
-        Some(Commands::Remove { alias }) => {
-            collection.remove(alias).save_to(&config.server_path);
-            println!("Server alias {} have been removed", alias)
+            None => {}
         }
-        Some(Commands::Modify {
-            alias,
-            username,
-            address,
-            port,
-        }) => match collection.get(alias) {
-            Some(server) => {
-                let server = Server {
-                    username: match username {
-                        Some(val) => val.to_string(),
-                        _ => server.username.to_string(),
-                    },
-                    address: match address {
-                        Some(val) => val.to_string(),
-                        _ => server.address.to_string(),
-                    },
-                    port: match port {
-                        Some(val) => val.to_owned(),
-                        _ => server.port,
-                    },
-                };
-                collection
-                    .remove(alias)
-                    .insert(alias.to_string(), server)
-                    .save_to(&config.server_path);
-            }
-            None => {
-                println!("Cannot find specify alias")
-            }
-        },
-        Some(Commands::Rename { alias, new_alias }) => {
-            if collection.rename(alias, new_alias) {
-                collection.save_to(&config.server_path);
-                println!("Server alias {} have been rename to {}", alias, new_alias);
-            } else {
-                println!("Cannot find specify alias");
-            }
-        }
-        Some(Commands::Go { alias }) => {
-            match collection.get(alias) {
-                None => collection.show_table(),
-                Some(server) => {
-                    server.connect(&config);
-                }
-            };
-        }
-        Some(Commands::Link {}) => {
-            println!("Will implement in future!");
-        }
-        Some(Commands::List {}) => {
-            collection.show_table();
-        }
-        None => {}
     }
+}
+
+fn main() {
+    App::run();
 }
