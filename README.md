@@ -23,6 +23,7 @@ Create a server alias
 Connect to an aliased server
 
 ```bash
+> psm alias_name
 > psm go alias_name
 ```
 

@@ -12,6 +12,8 @@ pub struct App {}
 #[clap(arg_required_else_help(true))]
 #[clap(subcommand_negates_reqs(true))]
 struct Cli {
+    #[clap(default_value = "-", hide_default_value(true), hide(true))]
+    alias: String,
     #[clap(subcommand)]
     command: Option<Commands>,
 }
@@ -97,6 +99,12 @@ impl App {
         let cli = Cli::parse();
         let mut collection: ServerCollection =
             ServerCollection::read_from_file(&config.server_path);
+        match collection.get(&cli.alias) {
+            Some(server) => {
+                server.connect(&config);
+            },
+            None => {}
+        };
         match &cli.command {
             Some(Commands::Create {
                 alias,
