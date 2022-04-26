@@ -47,6 +47,15 @@ Modify alias fields, it just modifies the present fields.
 > psm upd alias_name -u username -p port // just modify username and port
 ```
 
+Configure PSM settings
+
+```bash
+> psm set -c "C:\path\to\ssh_client" // set ssh_client path
+> psm set -s "C:\path\to\server.json" // set server file path
+> psm set -p "C:\path\to\id_rsa.pub" // set public key path
+> psm set -s "C:\path\to\server.json" -p "C:\path\to\id_rsa.pub" // set server file path and public key path in one time 
+```
+
 Show command/subcommand help
 
 ```bash
@@ -59,7 +68,7 @@ Show command/subcommand help
 - [x] Basic feature (List/Create/Remove/Rename/Modify/Connect)
 - [ ] Copy public RSA key to server
 - [ ] Different RSA key for each alias
-- [ ] Config use cli
+- [x] Config use cli
 - [ ] Test
 
 ## License

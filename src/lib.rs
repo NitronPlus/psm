@@ -55,6 +55,14 @@ enum Commands {
         name = "cp"
     )]
     Link {},
+    Set {
+        #[clap(short)]
+        pub_key_path: Option<String>,
+        #[clap(short)]
+        server_path: Option<String>,
+        #[clap(short)]
+        client_path: Option<String>,
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -182,9 +190,45 @@ impl App {
             }
             Some(Commands::List {}) => {
                 collection.show_table();
-            }
+            },
+            Some(Commands::Set {
+                     pub_key_path,
+                     server_path,
+                     client_path,
+                 }) => {
+                let config = Config {
+                    pub_key_path: match pub_key_path {
+                        Some(val) => {
+                            App::path_exists(val)
+                        },
+                        _ => config.pub_key_path
+                    },
+                    server_path: match server_path {
+                        Some(val) => {
+                            App::path_exists(val)
+                        },
+                        _ => config.server_path,
+                    },
+                    ssh_client_path: match client_path {
+                        Some(val) => {
+                            App::path_exists(val)
+                        },
+                        _ => config.ssh_client_path,
+                    },
+                };
+                config.save();
+            },
             None => {}
         }
+    }
+
+    pub fn path_exists(path: &String) -> PathBuf {
+        let path = PathBuf::from(path);
+        if !path.exists() {
+            println!("{:?} not found!", path);
+            std::process::exit(1);
+        }
+        path
     }
 }
 
@@ -208,8 +252,17 @@ impl Config {
                 }
                 Config::read_from_file(config_path)
             }
-            None => panic!("cannot find user home dir"),
+            None => {
+                println!("cannot find user home dir");
+                std::process::exit(1);
+            }
         }
+    }
+
+    fn save(&self) {
+        let home_dir = dirs::home_dir().unwrap();
+        let config_path = home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME")).join("config.json");
+        self.save_to(config_path)
     }
 }
 
