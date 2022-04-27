@@ -8,26 +8,26 @@
 
 ## How To Use
 
-Show list
+### Show list
 
 ```bash
 > psm ls
 ```
 
-Create a server alias
+### Create a server alias
 
 ```bash
 > psm new alias_name username server_address ssh_port(optional, defautl is 22)
 ```
 
-Connect to an aliased server
+### Connect to an aliased server
 
 ```bash
 > psm alias_name
 > psm go alias_name
 ```
 
-Rename an alias
+### Rename an alias
 
 ```bash
 > psm mv old_alias_name new_alias_name
@@ -38,7 +38,9 @@ Remove an alias
 > psm rm alias
 ```
 
-Modify alias fields, it just modifies the present fields. 
+### Modify alias fields
+
+It just modifies the present fields.
 
 ```bash
 > psm upd alias_name -u username -a server_address -p port // will modifiy all fields
@@ -47,7 +49,15 @@ Modify alias fields, it just modifies the present fields.
 > psm upd alias_name -u username -p port // just modify username and port
 ```
 
-Configure PSM settings
+### Copy RSA public key to server
+
+NOTICE: This command won't check if the public key has existed in target server.
+
+```bash
+> psm cp alias_name
+```
+
+### Configure PSM settings
 
 ```bash
 > psm set -c "C:\path\to\ssh_client" // set ssh_client path
@@ -56,7 +66,7 @@ Configure PSM settings
 > psm set -s "C:\path\to\server.json" -p "C:\path\to\id_rsa.pub" // set server file path and public key path in one time 
 ```
 
-Show command/subcommand help
+### Show command/subcommand help
 
 ```bash
 > psm help // show command help
@@ -66,7 +76,7 @@ Show command/subcommand help
 ## Todo
 
 - [x] Basic feature (List/Create/Remove/Rename/Modify/Connect)
-- [ ] Copy public RSA key to server
+- [x] Copy public RSA key to server
 - [ ] Different RSA key for each alias
 - [x] Config use cli
 - [ ] Test

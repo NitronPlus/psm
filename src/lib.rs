@@ -51,10 +51,10 @@ enum Commands {
     #[clap(about = "List all server alias", name = "ls", display_order = 2)]
     List {},
     #[clap(
-        about = "Copy rsa pub key to remote server(not implement!)",
+        about = "Copy rsa pub key to remote server",
         name = "cp"
     )]
-    Link {},
+    Link { alias: String },
     Set {
         #[clap(short)]
         pub_key_path: Option<String>,
@@ -62,7 +62,7 @@ enum Commands {
         server_path: Option<String>,
         #[clap(short)]
         client_path: Option<String>,
-    }
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -110,7 +110,7 @@ impl App {
         match collection.get(&cli.alias) {
             Some(server) => {
                 server.connect(&config);
-            },
+            }
             None => {}
         };
         match &cli.command {
@@ -137,7 +137,7 @@ impl App {
             },
             Some(Commands::Remove { alias }) => {
                 collection.remove(alias).save_to(&config.server_path);
-                println!("Server alias {} have been removed", alias)
+                println!("Server alias {} has been removed", alias)
             }
             Some(Commands::Modify {
                 alias,
@@ -172,7 +172,7 @@ impl App {
             Some(Commands::Rename { alias, new_alias }) => {
                 if collection.rename(alias, new_alias) {
                     collection.save_to(&config.server_path);
-                    println!("Server alias {} have been rename to {}", alias, new_alias);
+                    println!("Server alias {} has been rename to {}", alias, new_alias);
                 } else {
                     println!("Cannot find specify alias");
                 }
@@ -185,39 +185,38 @@ impl App {
                     }
                 };
             }
-            Some(Commands::Link {}) => {
-                println!("Will implement in future!");
+            Some(Commands::Link { alias }) => {
+                match collection.get(alias) {
+                    None => collection.show_table(),
+                    Some(server) => {
+                        server.copy_id(&config);
+                    }
+                };
             }
             Some(Commands::List {}) => {
                 collection.show_table();
-            },
+            }
             Some(Commands::Set {
-                     pub_key_path,
-                     server_path,
-                     client_path,
-                 }) => {
+                pub_key_path,
+                server_path,
+                client_path,
+            }) => {
                 let config = Config {
                     pub_key_path: match pub_key_path {
-                        Some(val) => {
-                            App::path_exists(val)
-                        },
-                        _ => config.pub_key_path
+                        Some(val) => App::path_exists(val),
+                        _ => config.pub_key_path,
                     },
                     server_path: match server_path {
-                        Some(val) => {
-                            App::path_exists(val)
-                        },
+                        Some(val) => App::path_exists(val),
                         _ => config.server_path,
                     },
                     ssh_client_path: match client_path {
-                        Some(val) => {
-                            App::path_exists(val)
-                        },
+                        Some(val) => App::path_exists(val),
                         _ => config.ssh_client_path,
                     },
                 };
                 config.save();
-            },
+            }
             None => {}
         }
     }
@@ -253,7 +252,7 @@ impl Config {
                 Config::read_from_file(config_path)
             }
             None => {
-                println!("cannot find user home dir");
+                println!("Cannot find user's home dir");
                 std::process::exit(1);
             }
         }
@@ -261,7 +260,9 @@ impl Config {
 
     fn save(&self) {
         let home_dir = dirs::home_dir().unwrap();
-        let config_path = home_dir.join(".".to_owned() + env!("CARGO_PKG_NAME")).join("config.json");
+        let config_path = home_dir
+            .join(".".to_owned() + env!("CARGO_PKG_NAME"))
+            .join("config.json");
         self.save_to(config_path)
     }
 }
@@ -270,13 +271,35 @@ impl Server {
     fn connect(&self, config: &Config) {
         let host = format!("{}@{}", self.username, self.address);
         let port = format!("-p{}", self.port);
+        let args = vec![host, port];
         std::process::Command::new(&config.ssh_client_path)
-            .arg(host)
-            .arg(port)
-            .spawn()
-            .unwrap()
-            .wait()
+            .args(args)
+            .status()
             .unwrap();
+    }
+
+    fn copy_id(&self, config: &Config) {
+        let key_string = std::fs::read_to_string(&config.pub_key_path).unwrap();
+        let host = format!("{}@{}", self.username, self.address);
+        let port = format!("-p{}", self.port);
+        let insert_key_cmd = format!(
+            "echo {} >> ~/.ssh/authorized_keys ; exit 0;",
+            key_string.replace('\n', "")
+        );
+        let args = vec![host, port, insert_key_cmd];
+        let status = std::process::Command::new(&config.ssh_client_path)
+            .args(args)
+            .status();
+        match status {
+            Ok(val) => {
+                if let Some(0) = val.code() {
+                    println!("Key has been install to {}", self.address)
+                } else {
+                    println!("Cannot install key to {}", self.address)
+                }
+            }
+            Err(err) => println!("Fatal error while install key {:?}", err),
+        }
     }
 }
 
