@@ -4,6 +4,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 pub struct App {}
 
@@ -50,11 +51,9 @@ enum Commands {
     Go { alias: String },
     #[clap(about = "List all server alias", name = "ls", display_order = 2)]
     List {},
-    #[clap(
-        about = "Copy rsa pub key to remote server",
-        name = "cp"
-    )]
+    #[clap(about = "Copy RSA public key to remote server", name = "cp")]
     Link { alias: String },
+    #[clap(about = "Configure PSM")]
     Set {
         #[clap(short)]
         pub_key_path: Option<String>,
@@ -272,7 +271,7 @@ impl Server {
         let host = format!("{}@{}", self.username, self.address);
         let port = format!("-p{}", self.port);
         let args = vec![host, port];
-        std::process::Command::new(&config.ssh_client_path)
+        Command::new(&config.ssh_client_path)
             .args(args)
             .status()
             .unwrap();
@@ -287,9 +286,7 @@ impl Server {
             key_string.replace('\n', "")
         );
         let args = vec![host, port, insert_key_cmd];
-        let status = std::process::Command::new(&config.ssh_client_path)
-            .args(args)
-            .status();
+        let status = Command::new(&config.ssh_client_path).args(args).status();
         match status {
             Ok(val) => {
                 if let Some(0) = val.code() {
@@ -298,7 +295,7 @@ impl Server {
                     println!("Cannot install key to {}", self.address)
                 }
             }
-            Err(err) => println!("Fatal error while install key {:?}", err),
+            Err(_err) => println!("Fatal error while install key"),
         }
     }
 }

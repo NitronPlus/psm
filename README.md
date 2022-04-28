@@ -76,7 +76,7 @@ NOTICE: This command won't check if the public key has existed in target server.
 ## Todo
 
 - [x] Basic feature (List/Create/Remove/Rename/Modify/Connect)
-- [x] Copy public RSA key to server
+- [x] Copy RSA public key to server
 - [ ] Different RSA key for each alias
 - [x] Config use cli
 - [ ] Test
