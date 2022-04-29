@@ -83,29 +83,19 @@ struct ServerCollection {
     hosts: BTreeMap<String, Server>,
 }
 
-trait PrettyJson {
+trait StorageObject {
     fn pretty_json(&self) -> String;
-}
-
-trait SaveToFile {
     fn save_to<P: AsRef<Path>>(&self, path: P)
     where
         Self: Serialize;
-}
-
-trait ReadFromFile {
-    fn read_from_file<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> T {
-        let v = std::fs::read_to_string(path).unwrap();
-        serde_json::from_str::<T>(&v).unwrap()
-    }
+    fn read_from<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> T;
 }
 
 impl App {
     pub fn run() {
         let config = Config::init();
         let cli = Cli::parse();
-        let mut collection: ServerCollection =
-            ServerCollection::read_from_file(&config.server_path);
+        let mut collection: ServerCollection = ServerCollection::read_from(&config.server_path);
         match collection.get(&cli.alias) {
             Some(server) => {
                 server.connect(&config);
@@ -248,7 +238,7 @@ impl Config {
                     };
                     config.save_to(&config_path);
                 }
-                Config::read_from_file(config_path)
+                Config::read_from(config_path)
             }
             None => {
                 println!("Cannot find user's home dir");
@@ -365,16 +355,15 @@ impl ServerCollection {
     }
 }
 
-impl<T: Serialize> PrettyJson for T {
+impl<T: Serialize> StorageObject for T {
     fn pretty_json(&self) -> String {
         serde_json::to_string_pretty(self).unwrap()
     }
-}
-
-impl<T: PrettyJson> SaveToFile for T {
     fn save_to<P: AsRef<Path>>(&self, path: P) {
         std::fs::write(path, self.pretty_json()).unwrap();
     }
+    fn read_from<R: DeserializeOwned, P: AsRef<Path>>(path: P) -> R {
+        let v = std::fs::read_to_string(path).unwrap();
+        serde_json::from_str::<R>(&v).unwrap()
+    }
 }
-
-impl<T: DeserializeOwned> ReadFromFile for T {}
