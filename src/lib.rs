@@ -273,7 +273,7 @@ impl Server {
         let port = format!("-p{}", self.port);
         let insert_key_cmd = format!(
             "echo {} >> ~/.ssh/authorized_keys ; exit 0;",
-            key_string.replace('\n', "")
+            key_string.replace('\n', "").replace('\r', "")
         );
         let args = vec![host, port, insert_key_cmd];
         let status = Command::new(&config.ssh_client_path).args(args).status();
