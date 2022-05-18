@@ -51,7 +51,6 @@ It just modifies the present fields.
 
 ### Copy RSA public key to server
 
-NOTICE: This command won't check if the public key has existed in target server.
 
 ```bash
 > psm cp alias_name
