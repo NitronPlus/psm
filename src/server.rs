@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::Command;
 
-use cli_table::{Cell, CellStruct, format::Justify, print_stdout, Style, Table};
+use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
 use serde::{Deserialize, Serialize};
 
 use crate::app::StorageObject;

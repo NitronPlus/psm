@@ -4,7 +4,7 @@
 
 ## Introduction
 
-> A cli tool for multi remote SSH server management.
+> A cross-platform cli tool for multi remote SSH server management.
 
 ## How To Use
 
@@ -57,7 +57,7 @@ NOTICE: This command won't check if the public key has existed in target server.
 > psm cp alias_name
 ```
 
-### Configure PSM settings
+### Configure PSM
 
 ```bash
 > psm set -c "C:\path\to\ssh_client" // set ssh_client path
