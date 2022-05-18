@@ -33,7 +33,8 @@
 > psm mv old_alias_name new_alias_name
 ```
 
-Remove an alias
+### Remove an alias
+
 ```bash
 > psm rm alias
 ```
