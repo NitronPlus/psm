@@ -100,10 +100,9 @@ impl Server {
         let key_string = std::fs::read_to_string(&config.pub_key_path).unwrap();
         let host = format!("{}@{}", self.username, self.address);
         let port = format!("-p{}", self.port);
+        let key_string = key_string.replace('\n', "").replace('\r', "");
         let insert_key_cmd = format!(
-            "echo {} >> ~/.ssh/authorized_keys ; exit 0;",
-            key_string.replace('\n', "").replace('\r', "")
-        );
+            "grep -cq '{key_string}' ~/.ssh/authorized_keys || echo {key_string} >> ~/.ssh/authorized_keys ; exit 0;");
         let args = vec![host, port, insert_key_cmd];
         let status = Command::new(&config.ssh_client_path).args(args).status();
         match status {
