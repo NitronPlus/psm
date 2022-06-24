@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -43,15 +44,22 @@ pub enum Commands {
     Go { alias: String },
     #[clap(about = "List all server alias", name = "ls", display_order = 2)]
     List {},
-    #[clap(about = "Copy RSA public key to remote server", name = "cp")]
+    #[clap(about = "Copy RSA public key to remote server", name = "ln")]
     Link { alias: String },
+    #[clap(about = "Copy files to remote server", name = "cp")]
+    Scp {
+        source: PathBuf,
+        alias: String,
+    },
     #[clap(about = "Configure PSM")]
     Set {
+        #[clap(short = 'k')]
+        pub_key_path: Option<PathBuf>,
         #[clap(short)]
-        pub_key_path: Option<String>,
+        server_path: Option<PathBuf>,
         #[clap(short)]
-        server_path: Option<String>,
-        #[clap(short)]
-        client_path: Option<String>,
+        client_path: Option<PathBuf>,
+        #[clap(short = 'a')]
+        scp_path: Option<PathBuf>,
     },
 }

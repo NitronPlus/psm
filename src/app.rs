@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use clap::Parser;
 use serde::de::DeserializeOwned;
@@ -8,16 +9,21 @@ use crate::cli::{Cli, Commands};
 use crate::config::Config;
 use crate::server::{Server, ServerCollection};
 
-pub struct App {}
+pub struct App {
+    config: Config,
+}
 
 impl App {
-    pub fn run() {
-        let config = Config::init();
+    pub fn init(config: Config) -> Self {
+        Self { config }
+    }
+    pub fn run(&self) {
         let cli = Cli::parse();
-        let mut collection: ServerCollection = ServerCollection::read_from(&config.server_path);
+        let mut collection: ServerCollection =
+            ServerCollection::read_from(&self.config.server_file_path);
         match collection.get(&cli.alias) {
             Some(server) => {
-                server.connect(&config);
+                self.connect(server);
             }
             None => {}
         };
@@ -36,7 +42,7 @@ impl App {
                     };
                     collection
                         .insert(alias.to_string(), server)
-                        .save_to(&config.server_path);
+                        .save_to(&self.config.server_file_path);
                     collection.show_table();
                 }
                 _ => {
@@ -44,7 +50,9 @@ impl App {
                 }
             },
             Some(Commands::Remove { alias }) => {
-                collection.remove(alias).save_to(&config.server_path);
+                collection
+                    .remove(alias)
+                    .save_to(&self.config.server_file_path);
                 println!("Server alias {} has been removed", alias)
             }
             Some(Commands::Modify {
@@ -71,7 +79,7 @@ impl App {
                     collection
                         .remove(alias)
                         .insert(alias.to_string(), server)
-                        .save_to(&config.server_path);
+                        .save_to(&self.config.server_file_path);
                 }
                 None => {
                     println!("Cannot find specify alias")
@@ -79,7 +87,7 @@ impl App {
             },
             Some(Commands::Rename { alias, new_alias }) => {
                 if collection.rename(alias, new_alias) {
-                    collection.save_to(&config.server_path);
+                    collection.save_to(&self.config.server_file_path);
                     println!("Server alias {} has been rename to {}", alias, new_alias);
                 } else {
                     println!("Cannot find specify alias");
@@ -88,39 +96,61 @@ impl App {
             Some(Commands::Go { alias }) => {
                 match collection.get(alias) {
                     None => collection.show_table(),
-                    Some(server) => {
-                        server.connect(&config);
-                    }
-                };
-            }
-            Some(Commands::Link { alias }) => {
-                match collection.get(alias) {
-                    None => collection.show_table(),
-                    Some(server) => {
-                        server.copy_id(&config);
-                    }
+                    Some(server) => self.connect(server),
                 };
             }
             Some(Commands::List {}) => {
                 collection.show_table();
             }
+            Some(Commands::Link { alias }) => {
+                match collection.get(alias) {
+                    None => collection.show_table(),
+                    Some(server) => {
+                        self.copy_id(server);
+                    }
+                };
+            }
+            Some(Commands::Scp {
+                source,
+                alias
+            }) => {
+                let x:Vec<&str> = alias.split(':').collect();
+                let (alias, destination) = if let [alias, destination] = x[..] {
+                    (alias, destination)
+                } else {
+                    println!("Error occur while convert {} to destination", alias);
+                    std::process::exit(1);
+                };
+                match collection.get(&alias.to_string()) {
+                    None => collection.show_table(),
+                    Some(server) => {
+                        let source = self.path_exists(source);
+                        self.upload(server, source, destination.to_string())
+                    }
+                };
+            }
             Some(Commands::Set {
                 pub_key_path,
                 server_path,
                 client_path,
+                scp_path,
             }) => {
                 let config = Config {
                     pub_key_path: match pub_key_path {
-                        Some(val) => App::path_exists(val),
-                        _ => config.pub_key_path,
+                        Some(val) => self.path_exists(val),
+                        _ => self.config.pub_key_path.to_path_buf(),
                     },
-                    server_path: match server_path {
-                        Some(val) => App::path_exists(val),
-                        _ => config.server_path,
+                    server_file_path: match server_path {
+                        Some(val) => val.to_path_buf(),
+                        _ => self.config.server_file_path.to_path_buf(),
                     },
-                    ssh_client_path: match client_path {
-                        Some(val) => App::path_exists(val),
-                        _ => config.ssh_client_path,
+                    ssh_client_app_path: match client_path {
+                        Some(val) => val.to_path_buf(),
+                        _ => self.config.ssh_client_app_path.to_path_buf(),
+                    },
+                    scp_app_path: match scp_path {
+                        Some(val) => val.to_path_buf(),
+                        _ => self.config.scp_app_path.to_path_buf(),
                     },
                 };
                 config.save();
@@ -129,13 +159,61 @@ impl App {
         }
     }
 
-    pub fn path_exists(path: &String) -> PathBuf {
-        let path = PathBuf::from(path);
+    fn path_exists(&self, path: &PathBuf) -> PathBuf {
         if !path.exists() {
             println!("{:?} not found!", path);
             std::process::exit(1);
         }
-        path
+        path.to_path_buf()
+    }
+
+    fn connect(&self, server: &Server) {
+        let host = format!("{}@{}", server.username, server.address);
+        let port = format!("-p{}", server.port);
+        let args = vec![host, port];
+        Command::new(&self.config.ssh_client_app_path)
+            .args(args)
+            .status()
+            .unwrap();
+    }
+
+    fn copy_id(&self, server: &Server) {
+        let key_string = std::fs::read_to_string(&self.config.pub_key_path).unwrap();
+        let host = format!("{}@{}", server.username, server.address);
+        let port = format!("-p{}", server.port);
+        let key_string = key_string.replace('\n', "").replace('\r', "");
+        let insert_key_cmd = format!(
+            "grep -cq '{key_string}' ~/.ssh/authorized_keys || echo {key_string} >> ~/.ssh/authorized_keys ; exit 0;");
+        let args = vec![host, port, insert_key_cmd];
+        let status = Command::new(&self.config.ssh_client_app_path)
+            .args(args)
+            .status();
+        match status {
+            Ok(val) => {
+                if let Some(0) = val.code() {
+                    println!("Key has been install to {}", server.address)
+                } else {
+                    println!("Cannot install key to {}", server.address)
+                }
+            }
+            Err(_err) => println!("Fatal error while install key"),
+        }
+    }
+
+    fn upload(&self, server: &Server, source: PathBuf, destination: String) {
+        let is_dir = source.is_dir();
+        let host = format!("{}@{}:{}", server.username, server.address, destination);
+        println!("{}", host);
+        let mut port = format!("-p{}", server.port);
+
+        if is_dir {
+            port = format!("-rp{}", server.port);
+        }
+        let args = vec![port, source.as_path().display().to_string(), host];
+        Command::new(&self.config.scp_app_path)
+            .args(args)
+            .status()
+            .unwrap();
     }
 }
 

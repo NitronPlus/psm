@@ -6,6 +6,8 @@
 
 > A cross-platform cli tool for multi remote SSH server management.
 
+[Change Log](CHANGELOG.md)
+
 ## How To Use
 
 ### Show list
@@ -54,16 +56,25 @@ It just modifies the present fields.
 
 
 ```bash
-> psm cp alias_name
+> psm ln alias_name
 ```
+
+### Copy local file/dir to remote server
+ 
+
+```bash
+> psm cp path/to/source alias_name:path/to/destination
+```
+
+> NOTE: For now, ```psm cp``` do not support wildcard, you must specify explicit a dir or a file. 
 
 ### Configure PSM
 
 ```bash
 > psm set -c "C:\path\to\ssh_client" // set ssh_client path
 > psm set -s "C:\path\to\server.json" // set server file path
-> psm set -p "C:\path\to\id_rsa.pub" // set public key path
-> psm set -s "C:\path\to\server.json" -p "C:\path\to\id_rsa.pub" // set server file path and public key path in one time 
+> psm set -k "C:\path\to\id_rsa.pub" // set public key path
+> psm set -s "C:\path\to\server.json" -k "C:\path\to\id_rsa.pub" // set server file path and public key path in one time 
 ```
 
 ### Show command/subcommand help

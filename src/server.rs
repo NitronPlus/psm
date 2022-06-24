@@ -1,12 +1,10 @@
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::process::Command;
 
 use cli_table::{format::Justify, print_stdout, Cell, CellStruct, Style, Table};
 use serde::{Deserialize, Serialize};
 
 use crate::app::StorageObject;
-use crate::config::Config;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ServerCollection {
@@ -83,37 +81,4 @@ pub struct Server {
     pub username: String,
     pub address: String,
     pub port: u16,
-}
-
-impl Server {
-    pub fn connect(&self, config: &Config) {
-        let host = format!("{}@{}", self.username, self.address);
-        let port = format!("-p{}", self.port);
-        let args = vec![host, port];
-        Command::new(&config.ssh_client_path)
-            .args(args)
-            .status()
-            .unwrap();
-    }
-
-    pub fn copy_id(&self, config: &Config) {
-        let key_string = std::fs::read_to_string(&config.pub_key_path).unwrap();
-        let host = format!("{}@{}", self.username, self.address);
-        let port = format!("-p{}", self.port);
-        let key_string = key_string.replace('\n', "").replace('\r', "");
-        let insert_key_cmd = format!(
-            "grep -cq '{key_string}' ~/.ssh/authorized_keys || echo {key_string} >> ~/.ssh/authorized_keys ; exit 0;");
-        let args = vec![host, port, insert_key_cmd];
-        let status = Command::new(&config.ssh_client_path).args(args).status();
-        match status {
-            Ok(val) => {
-                if let Some(0) = val.code() {
-                    println!("Key has been install to {}", self.address)
-                } else {
-                    println!("Cannot install key to {}", self.address)
-                }
-            }
-            Err(_err) => println!("Fatal error while install key"),
-        }
-    }
 }

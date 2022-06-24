@@ -6,5 +6,5 @@ mod config;
 mod server;
 
 fn main() {
-    App::run();
+    App::init(config::Config::init()).run();
 }
