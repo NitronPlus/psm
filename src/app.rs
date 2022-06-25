@@ -112,13 +112,24 @@ impl App {
             }
             Some(Commands::Copy {
                 recursive,
+                download,
                 local,
                 remote,
             }) => {
                 let (alias, path) = Self::parse_remote(remote);
+                if *download && (local.len() != 1) {
+                    println!("local path must be one");
+                    return;
+                }
                 match collection.get(&alias.to_string()) {
                     None => collection.show_table(),
-                    Some(server) => self.upload(server, local, path, *recursive),
+                    Some(server) => {
+                        if *download {
+                            self.download(server, &local[0], &path, *recursive);
+                        } else {
+                            self.upload(server, &local, &path, *recursive);
+                        }
+                    }
                 };
             }
             Some(Commands::Download {
