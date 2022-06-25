@@ -48,7 +48,7 @@ pub enum Commands {
     #[clap(about = "Copy RSA public key to remote server", name = "ln")]
     Link { alias: String },
     #[clap(about = "Copy files to remote server", name = "cp")]
-    Scp {
+    Copy {
         #[clap(
             short,
             long,
@@ -56,9 +56,22 @@ pub enum Commands {
         )]
         recursive: bool,
         #[clap(multiple_values = true, required = true, help = "Local files or dir")]
-        source: Vec<PathBuf>,
+        local: Vec<String>,
         #[clap(required = true, help = "Remote path")]
-        alias: String,
+        remote: String,
+    },
+    #[clap(about = "Download files from remote server", name = "dl")]
+    Download {
+        #[clap(
+            short,
+            long,
+            help = "Recursively copy entire directories.  Note that will follows symbolic links encountered in the tree traversal."
+        )]
+        recursive: bool,
+        #[clap(required = true, help = "Remote path")]
+        remote: String,
+        #[clap(multiple_values = true, required = true, help = "Local path")]
+        local: String,
     },
     #[clap(about = "Configure PSM")]
     Set {

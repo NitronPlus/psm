@@ -110,21 +110,26 @@ impl App {
                     }
                 };
             }
-            Some(Commands::Scp {
+            Some(Commands::Copy {
                 recursive,
-                source,
-                alias,
+                local,
+                remote,
             }) => {
-                let x: Vec<&str> = alias.split(':').collect();
-                let (alias, destination) = if let [alias, destination] = x[..] {
-                    (alias, destination)
-                } else {
-                    println!("Error occur while convert {} to destination", alias);
-                    std::process::exit(1);
-                };
+                let (alias, path) = Self::parse_remote(remote);
                 match collection.get(&alias.to_string()) {
                     None => collection.show_table(),
-                    Some(server) => self.upload(server, source.to_owned(), destination, *recursive),
+                    Some(server) => self.upload(server, local, path, *recursive),
+                };
+            }
+            Some(Commands::Download {
+                recursive,
+                remote,
+                local,
+            }) => {
+                let (alias, path) = Self::parse_remote(remote);
+                match collection.get(&alias.to_string()) {
+                    None => collection.show_table(),
+                    Some(server) => self.download(server, local, path, *recursive),
                 };
             }
             Some(Commands::Set {
@@ -135,7 +140,7 @@ impl App {
             }) => {
                 let config = Config {
                     pub_key_path: match pub_key_path {
-                        Some(val) => self.path_exists(val),
+                        Some(val) => Self::path_exists(val),
                         _ => self.config.pub_key_path.to_path_buf(),
                     },
                     server_file_path: match server_path {
@@ -157,7 +162,18 @@ impl App {
         }
     }
 
-    fn path_exists(&self, path: &PathBuf) -> PathBuf {
+    fn parse_remote(remote: &String) -> (&str, &str) {
+        let x: Vec<&str> = remote.split(':').collect();
+        let (alias, path) = if let [alias, path] = x[..] {
+            (alias, path)
+        } else {
+            println!("{} is not a valid remote path", remote);
+            std::process::exit(1);
+        };
+        (alias, path)
+    }
+
+    fn path_exists(path: &PathBuf) -> PathBuf {
         if !path.exists() {
             println!("{:?} not found!", path);
             std::process::exit(1);
@@ -198,18 +214,35 @@ impl App {
         }
     }
 
-    fn upload(&self, server: &Server, source: Vec<PathBuf>, destination: &str, recursive: bool) {
-        let host = format!("{}@{}:{}", server.username, server.address, destination);
-        let mut port = format!("-p{}", server.port);
-
-        if recursive {
-            port = format!("-rp{}", server.port);
-        }
+    fn upload(&self, server: &Server, local: &[String], remote: &str, recursive: bool) {
+        let host = format!("{}@{}:{}", server.username, server.address, remote);
+        let port = if recursive {
+            format!("-rp{}", server.port)
+        } else {
+            format!("-p{}", server.port)
+        };
         let mut args = vec![port];
-        for path in source.iter() {
-            args.push(path.to_path_buf().display().to_string())
+        for path in local.iter() {
+            args.push(path.to_string())
         }
         args.push(host);
+        Command::new(&self.config.scp_app_path)
+            .args(args)
+            .status()
+            .unwrap();
+    }
+
+    // download file from server
+    fn download(&self, server: &Server, local: &String, remote: &str, recursive: bool) {
+        let host = format!("{}@{}:{}", server.username, server.address, remote);
+        let port = if recursive {
+            format!("-rp{}", server.port)
+        } else {
+            format!("-p{}", server.port)
+        };
+        let mut args = vec![port];
+        args.push(host);
+        args.push(local.to_string());
         Command::new(&self.config.scp_app_path)
             .args(args)
             .status()
