@@ -1,3 +1,10 @@
+## v0.4.1
+* Add ```-r``` flag for subcommand ```psm cp``` for recursively copy entire directories.
+* Subcommand ```psm cp``` support wildcard for local files. e.g.
+```bash
+psm cp path/to/*.files aliat:/path/to/dest 
+```
+
 ## v0.4.0
 * Rename subcommand ```psm cp``` to ```psm ln```
 * Rename psm config field, please change the config file manually. In the meantime, subcommand ```psm set``` is also changed.  

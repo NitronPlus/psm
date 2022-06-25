@@ -111,10 +111,11 @@ impl App {
                 };
             }
             Some(Commands::Scp {
+                recursive,
                 source,
-                alias
+                alias,
             }) => {
-                let x:Vec<&str> = alias.split(':').collect();
+                let x: Vec<&str> = alias.split(':').collect();
                 let (alias, destination) = if let [alias, destination] = x[..] {
                     (alias, destination)
                 } else {
@@ -123,10 +124,7 @@ impl App {
                 };
                 match collection.get(&alias.to_string()) {
                     None => collection.show_table(),
-                    Some(server) => {
-                        let source = self.path_exists(source);
-                        self.upload(server, source, destination.to_string())
-                    }
+                    Some(server) => self.upload(server, source.to_owned(), destination, *recursive),
                 };
             }
             Some(Commands::Set {
@@ -200,16 +198,18 @@ impl App {
         }
     }
 
-    fn upload(&self, server: &Server, source: PathBuf, destination: String) {
-        let is_dir = source.is_dir();
+    fn upload(&self, server: &Server, source: Vec<PathBuf>, destination: &str, recursive: bool) {
         let host = format!("{}@{}:{}", server.username, server.address, destination);
-        println!("{}", host);
         let mut port = format!("-p{}", server.port);
 
-        if is_dir {
+        if recursive {
             port = format!("-rp{}", server.port);
         }
-        let args = vec![port, source.as_path().display().to_string(), host];
+        let mut args = vec![port];
+        for path in source.iter() {
+            args.push(path.to_path_buf().display().to_string())
+        }
+        args.push(host);
         Command::new(&self.config.scp_app_path)
             .args(args)
             .status()

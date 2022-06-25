@@ -1,5 +1,6 @@
-use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -48,7 +49,15 @@ pub enum Commands {
     Link { alias: String },
     #[clap(about = "Copy files to remote server", name = "cp")]
     Scp {
-        source: PathBuf,
+        #[clap(
+            short,
+            long,
+            help = "Recursively copy entire directories.  Note that will follows symbolic links encountered in the tree traversal."
+        )]
+        recursive: bool,
+        #[clap(multiple_values = true, required = true, help = "Local files or dir")]
+        source: Vec<PathBuf>,
+        #[clap(required = true, help = "Remote path")]
         alias: String,
     },
     #[clap(about = "Configure PSM")]

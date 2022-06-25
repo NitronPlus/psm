@@ -8,7 +8,11 @@
 
 [Change Log](CHANGELOG.md)
 
-## How To Use
+## Requirements
+
+ssh and scp installed on system.
+
+## Usage
 
 ### Show list
 
@@ -43,13 +47,15 @@
 
 ### Modify alias fields
 
-It just modifies the present fields.
-
 ```bash
-> psm upd alias_name -u username -a server_address -p port // will modifiy all fields
-> psm upd alias_name -u username // just modify username
-> psm upd alias_name -p port // just modify port
-> psm upd alias_name -u username -p port // just modify username and port
+# modify all fields
+> psm upd alias_name -u username -a server_address -p port 
+# modify username
+> psm upd alias_name -u username 
+# modify port 
+> psm upd alias_name -p port 
+# modify username and port
+> psm upd alias_name -u username -p port  
 ```
 
 ### Copy RSA public key to server
@@ -64,24 +70,30 @@ It just modifies the present fields.
 
 ```bash
 > psm cp path/to/source alias_name:path/to/destination
+# Recursively copy entire directories
+> psm cp -r path/to/dir alias_name:path/to/destination
 ```
-
-> NOTE: For now, ```psm cp``` do not support wildcard, you must specify explicit a dir or a file. 
 
 ### Configure PSM
 
 ```bash
-> psm set -c "C:\path\to\ssh_client" // set ssh_client path
-> psm set -s "C:\path\to\server.json" // set server file path
-> psm set -k "C:\path\to\id_rsa.pub" // set public key path
-> psm set -s "C:\path\to\server.json" -k "C:\path\to\id_rsa.pub" // set server file path and public key path in one time 
+# set ssh_client path
+> psm set -c "C:\path\to\ssh_client" 
+# set server file path 
+> psm set -s "C:\path\to\server.json" 
+# set public key path
+> psm set -k "C:\path\to\id_rsa.pub" 
+# set server file path and public key path in one time
+> psm set -s "C:\path\to\server.json" -k "C:\path\to\id_rsa.pub"   
 ```
 
 ### Show command/subcommand help
 
 ```bash
-> psm help // show command help
-> psm help subcommand  // show specify subcommand help
+# show command help info
+> psm help  
+# show specify subcommand help info
+> psm help subcommand  
 ```
 
 ## Todo
