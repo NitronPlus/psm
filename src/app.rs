@@ -119,28 +119,17 @@ impl App {
                 let (alias, path) = Self::parse_remote(remote);
                 if *download && (local.len() != 1) {
                     println!("local path must be one");
-                    return;
+                    std::process::exit(1);
                 }
                 match collection.get(&alias.to_string()) {
                     None => collection.show_table(),
                     Some(server) => {
                         if *download {
-                            self.download(server, &local[0], &path, *recursive);
+                            self.download(server, &local[0], path, *recursive);
                         } else {
-                            self.upload(server, &local, &path, *recursive);
+                            self.upload(server, local, path, *recursive);
                         }
                     }
-                };
-            }
-            Some(Commands::Download {
-                recursive,
-                remote,
-                local,
-            }) => {
-                let (alias, path) = Self::parse_remote(remote);
-                match collection.get(&alias.to_string()) {
-                    None => collection.show_table(),
-                    Some(server) => self.download(server, local, path, *recursive),
                 };
             }
             Some(Commands::Set {
