@@ -66,6 +66,22 @@ pub enum Commands {
         #[clap(required = true, help = "Remote path")]
         remote: String,
     },
+    #[clap(
+        about = "Download the file from remote server to local machine",
+        name = "dl"
+    )]
+    Download {
+        #[clap(
+            short,
+            long,
+            help = "Recursively copy entire directories.  Note that will follows symbolic links encountered in the tree traversal."
+        )]
+        recursive: bool,
+        #[clap(required = true, help = "Remote path")]
+        remote: String,
+        #[clap(multiple_values = true, required = true, help = "Local path")]
+        local: String,
+    },
     #[clap(about = "Configure PSM")]
     Set {
         #[clap(short = 'k')]

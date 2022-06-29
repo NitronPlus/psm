@@ -132,6 +132,17 @@ impl App {
                     }
                 };
             }
+            Some(Commands::Download {
+                recursive,
+                remote,
+                local,
+            }) => {
+                let (alias, path) = Self::parse_remote(remote);
+                match collection.get(&alias.to_string()) {
+                    None => collection.show_table(),
+                    Some(server) => self.download(server, local, path, *recursive),
+                };
+            }
             Some(Commands::Set {
                 pub_key_path,
                 server_path,
