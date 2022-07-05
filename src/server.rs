@@ -6,17 +6,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::StorageObject;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct ServerCollection {
     hosts: BTreeMap<String, Server>,
 }
 
 impl ServerCollection {
     pub fn init(path: &Path) {
-        Self {
-            hosts: BTreeMap::new(),
-        }
-        .save_to(path);
+        ServerCollection::default().save_to(path);
     }
 
     pub fn get(&mut self, key: &String) -> Option<&Server> {

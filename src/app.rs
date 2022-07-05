@@ -266,7 +266,7 @@ pub(crate) trait StorageObject {
     fn save_to<P: AsRef<Path>>(&self, path: P)
     where
         Self: Serialize;
-    fn read_from<T: DeserializeOwned, P: AsRef<Path>>(path: P) -> T;
+    fn read_from<T: Default + DeserializeOwned + Serialize, P: AsRef<Path>>(path: P) -> T;
 }
 
 impl<T: Serialize> StorageObject for T {
@@ -276,8 +276,8 @@ impl<T: Serialize> StorageObject for T {
     fn save_to<P: AsRef<Path>>(&self, path: P) {
         std::fs::write(path, self.pretty_json()).unwrap();
     }
-    fn read_from<R: DeserializeOwned, P: AsRef<Path>>(path: P) -> R {
-        let v = std::fs::read_to_string(path).unwrap();
+    fn read_from<R: Default + DeserializeOwned + Serialize, P: AsRef<Path>>(path: P) -> R {
+        let v = std::fs::read_to_string(path).unwrap_or_else(|_| R::default().pretty_json());
         serde_json::from_str::<R>(&v).unwrap()
     }
 }

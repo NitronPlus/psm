@@ -84,13 +84,13 @@ pub enum Commands {
     },
     #[clap(about = "Configure PSM")]
     Set {
-        #[clap(short = 'k')]
+        #[clap(short = 'k', help = "Set the SSH public key path")]
         pub_key_path: Option<PathBuf>,
-        #[clap(short)]
+        #[clap(short, help = "Set the psm server file path")]
         server_path: Option<PathBuf>,
-        #[clap(short)]
+        #[clap(short, help = "Set the ssh client path")]
         client_path: Option<PathBuf>,
-        #[clap(short = 'a')]
+        #[clap(short = 'a', help = "Set the scp path")]
         scp_path: Option<PathBuf>,
     },
 }
