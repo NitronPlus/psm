@@ -228,9 +228,9 @@ impl App {
     fn upload(&self, server: &Server, local: &[String], remote: &str, recursive: bool) {
         let host = format!("{}@{}:{}", server.username, server.address, remote);
         let port = if recursive {
-            format!("-rp{}", server.port)
+            format!("-rP{}", server.port)
         } else {
-            format!("-p{}", server.port)
+            format!("-P{}", server.port)
         };
         let mut args = vec![port];
         for path in local.iter() {
@@ -247,9 +247,9 @@ impl App {
     fn download(&self, server: &Server, local: &String, remote: &str, recursive: bool) {
         let host = format!("{}@{}:{}", server.username, server.address, remote);
         let port = if recursive {
-            format!("-rp{}", server.port)
+            format!("-rP{}", server.port)
         } else {
-            format!("-p{}", server.port)
+            format!("-P{}", server.port)
         };
         let mut args = vec![port];
         args.push(host);

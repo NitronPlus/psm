@@ -52,16 +52,18 @@ pub enum Commands {
         #[clap(
             short,
             long,
-            help = "Recursively copy entire directories.  Note that will follows symbolic links encountered in the tree traversal."
+            help = "Recursively copy entire directories.  Note that will follows symbolic links encountered in the tree traversal.",
+            display_order = 1
         )]
         recursive: bool,
         #[clap(
             short,
             long,
-            help = "Download the file from remote server to local machine"
+            help = "Download the file from remote server to local machine" ,
+            display_order = 2
         )]
         download: bool,
-        #[clap(multiple_values = true, required = true, help = "Local files or dir")]
+        #[clap(multiple_values = true, required = true, help = "Local files or dir", display_order = 3)]
         local: Vec<String>,
         #[clap(required = true, help = "Remote path")]
         remote: String,
@@ -84,13 +86,13 @@ pub enum Commands {
     },
     #[clap(about = "Configure PSM")]
     Set {
-        #[clap(short = 'k', help = "Set the SSH public key path")]
+        #[clap(short = 'k', help = "Set the SSH public key path", display_order = 1)]
         pub_key_path: Option<PathBuf>,
-        #[clap(short, help = "Set the psm server file path")]
+        #[clap(short, help = "Set the psm server file path", display_order = 2)]
         server_path: Option<PathBuf>,
-        #[clap(short, help = "Set the ssh client path")]
+        #[clap(short, help = "Set the ssh client path", display_order = 3)]
         client_path: Option<PathBuf>,
-        #[clap(short = 'a', help = "Set the scp path")]
+        #[clap(short = 'a', help = "Set the scp path", display_order = 4)]
         scp_path: Option<PathBuf>,
     },
 }
