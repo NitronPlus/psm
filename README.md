@@ -23,7 +23,7 @@ ssh and scp installed on system.
 ### Create a server alias
 
 ```bash
-> psm new alias_name username server_address ssh_port(optional, defautl is 22)
+> psm new alias_name username@host[:port] (port is optional, default is 22)
 ```
 
 ### Connect to an aliased server
@@ -45,17 +45,10 @@ ssh and scp installed on system.
 > psm rm alias
 ```
 
-### Modify alias fields
+### Modify alias
 
 ```bash
-# modify all fields
-> psm upd alias_name -u username -a server_address -p port 
-# modify username
-> psm upd alias_name -u username 
-# modify port 
-> psm upd alias_name -p port 
-# modify username and port
-> psm upd alias_name -u username -p port  
+> psm upd alias_name username@host[:port] 
 ```
 
 ### Copy RSA public key to server
@@ -66,7 +59,7 @@ ssh and scp installed on system.
 ```
 
 ### Copy local file/dir to remote server
- 
+
 
 ```bash
 > psm cp path/to/source alias_name:path/to/destination
@@ -108,9 +101,9 @@ ssh and scp installed on system.
 
 Licensed under either of
 
- * Apache License, Version 2.0
-   ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license
-   ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0
+  ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license
+  ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.

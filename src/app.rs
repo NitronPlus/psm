@@ -28,20 +28,11 @@ impl App {
             None => {}
         };
         match &cli.command {
-            Some(Commands::Create {
-                alias,
-                username,
-                address,
-                port,
-            }) => match collection.get(alias) {
+            Some(Commands::Create { alias, remote_host }) => match collection.get(alias) {
                 None => {
-                    let server = Server {
-                        username: username.to_string(),
-                        address: address.to_string(),
-                        port: port.to_owned(),
-                    };
+                    let server = Server::from(remote_host);
                     collection
-                        .insert(alias.to_string(), server)
+                        .insert(alias, server)
                         .save_to(&self.config.server_file_path);
                     collection.show_table();
                 }
@@ -55,30 +46,12 @@ impl App {
                     .save_to(&self.config.server_file_path);
                 println!("Server alias {} has been removed", alias)
             }
-            Some(Commands::Modify {
-                alias,
-                username,
-                address,
-                port,
-            }) => match collection.get(alias) {
-                Some(server) => {
-                    let server = Server {
-                        username: match username {
-                            Some(val) => val.to_string(),
-                            _ => server.username.to_string(),
-                        },
-                        address: match address {
-                            Some(val) => val.to_string(),
-                            _ => server.address.to_string(),
-                        },
-                        port: match port {
-                            Some(val) => val.to_owned(),
-                            _ => server.port,
-                        },
-                    };
+            Some(Commands::Modify { alias, remote_host }) => match collection.get(alias) {
+                Some(_server) => {
+                    let server = Server::from(remote_host);
                     collection
                         .remove(alias)
-                        .insert(alias.to_string(), server)
+                        .insert(alias, server)
                         .save_to(&self.config.server_file_path);
                 }
                 None => {

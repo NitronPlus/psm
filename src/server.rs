@@ -10,6 +10,8 @@ use crate::app::StorageObject;
 pub struct ServerCollection {
     hosts: BTreeMap<String, Server>,
 }
+const SERVER_REGEX: &str =
+    r"^(?P<username>[A-Za-z0-9_]+)@(?P<address>[A-Za-z0-9-_.]+)(?:[:]*(?P<port>\d*))?$";
 
 impl ServerCollection {
     pub fn init(path: &Path) {
@@ -20,8 +22,8 @@ impl ServerCollection {
         self.hosts.get(key)
     }
 
-    pub fn insert(&mut self, key: String, server: Server) -> &mut Self {
-        self.hosts.insert(key, server);
+    pub fn insert(&mut self, key: &String, server: Server) -> &mut Self {
+        self.hosts.insert(key.to_owned(), server);
         self
     }
 
@@ -43,7 +45,7 @@ impl ServerCollection {
                     address: server.address.to_string(),
                     port: server.port,
                 };
-                self.remove(from).insert(to.to_string(), new_value);
+                self.remove(from).insert(to, new_value);
                 true
             }
         }
@@ -78,4 +80,21 @@ pub struct Server {
     pub username: String,
     pub address: String,
     pub port: u16,
+}
+
+impl Server {
+    pub fn from(host: &str) -> Self {
+        let re = regex::Regex::new(SERVER_REGEX).unwrap();
+        match re.captures(host) {
+            Some(caps) => Server {
+                username: caps["username"].to_string(),
+                address: caps["address"].to_string(),
+                port: caps["port"].parse().unwrap_or(22),
+            },
+            None => {
+                println!("Parse remote host {} failed!", host);
+                std::process::exit(1);
+            }
+        }
+    }
 }

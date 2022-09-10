@@ -20,25 +20,11 @@ pub enum Commands {
         name = "new",
         display_order = 3
     )]
-    Create {
-        alias: String,
-        username: String,
-        address: String,
-        #[clap(default_value_t = 22)]
-        port: u16,
-    },
+    Create { alias: String, remote_host: String },
     #[clap(about = "Remove the specify alias", name = "rm", display_order = 4)]
     Remove { alias: String },
     #[clap(about = "Modify the specify alias", name = "upd", display_order = 6)]
-    Modify {
-        alias: String,
-        #[clap(short, display_order = 1)]
-        username: Option<String>,
-        #[clap(short, display_order = 2)]
-        address: Option<String>,
-        #[clap(short, display_order = 3)]
-        port: Option<u16>,
-    },
+    Modify { alias: String, remote_host: String },
     #[clap(about = "Rename the specify alias", name = "mv", display_order = 5)]
     Rename { alias: String, new_alias: String },
     #[clap(about = "Connect to the specify server alias", display_order = 1)]
@@ -59,11 +45,16 @@ pub enum Commands {
         #[clap(
             short,
             long,
-            help = "Download the file from remote server to local machine" ,
+            help = "Download the file from remote server to local machine",
             display_order = 2
         )]
         download: bool,
-        #[clap(multiple_values = true, required = true, help = "Local files or dir", display_order = 3)]
+        #[clap(
+            multiple_values = true,
+            required = true,
+            help = "Local files or dir",
+            display_order = 3
+        )]
         local: Vec<String>,
         #[clap(required = true, help = "Remote path")]
         remote: String,

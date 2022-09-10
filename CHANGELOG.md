@@ -1,3 +1,12 @@
+## v0.5.0
+* Change subcommand ```psm new``` and ```psm upd``` args. Make them easy to use. e.g.
+ ```bash
+psm new example root@remote.host
+psm upd example root@remote.host:2314
+psm upd example root@remote.host
+```
+
+
 ## v0.4.1
 * Add ```-r``` flag for subcommand ```psm cp``` for recursively copy entire directories.
 * Subcommand ```psm cp``` support wildcard for local files. e.g.
